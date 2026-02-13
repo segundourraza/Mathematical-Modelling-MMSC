@@ -1,18 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
-
-# In[7]:
-
-
 import numpy as np
-import matplotlib.pyplot as plt
-import scipy as sc
-import math
-from scipy.special import erf
-
-
-# In[49]:
-
 
 def Q0_expr(f,xi, C, G, f0, Q0, epsilon):
     gamma = 1 / (C+G-xi)
@@ -229,10 +217,6 @@ def Q4_expr(f,xi, C, G, f0, Q0, epsilon):
         )
     )
 
-
-# In[53]:
-
-
 def coeffs_fq(xi, C, G, f0, Q0, epsilon):
     "Returns column vector with coefficients of constant to 5th order expansions about eta= 0"
     f = np.zeros(6)
@@ -254,30 +238,3 @@ def coeffs_fq(xi, C, G, f0, Q0, epsilon):
              - A)
         f[k+1] = (q[k] - A) / B
     return f, q
-
-
-# In[ ]:
-
-
-
-
-
-
-
-# In[33]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
