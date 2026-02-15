@@ -183,8 +183,10 @@ if __name__ == '__main__':
     f0_guess = 0.4
     eta0 = 1e-2
 
+
     sol1, _ = solver.solve(f0=f0_guess, eta0 = eta0)
     sol2, _ = solver.solve_old(f0=f0_guess, eta0 = eta0)
+
     # print(sol1)
     # print(sol2)
     

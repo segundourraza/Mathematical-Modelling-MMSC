@@ -224,8 +224,7 @@ def coeffs_fq(xi, C, G, f0, Q0, epsilon):
         f[k+1] = 0
         A = Q_expressions[k](f, gamma, omega, xi, C, G, epsilon)
         f[k+1] = 1
-        B = (Q_expressions[k](f, gamma, omega, xi, C, G, epsilon)
-             - A)
+        B = (Q_expressions[k](f, gamma, omega, xi, C, G, epsilon) - A)
         f[k+1] = (q[k] - A) / B
     return f, q
 
