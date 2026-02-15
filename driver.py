@@ -16,49 +16,50 @@ if __name__ == '__main__':
     solver = Solver(a1, a2, a3, q0, epsilon)
 
     f0_guess = 0.1
+    # f0_guess = 0.6
     eta0 = 1e-2
     eta0 = 1e-6
 
     
-    sol_guessed, _ = solver.solve(f0=f0_guess, eta0 = eta0)
-    Res = solver._check_integral_condition(sol_guessed)
+    sol_eta, sol_x = solver.solve(f0=f0_guess, eta0 = eta0)
+    Res = solver._check_integral_condition(sol_eta, sol_x)
     print(f"Guessed f0: {f0_guess:.4f}")
     print(f"Residual:   {Res:.4e}")
 
-    f0, sol_actual = solver.find_f0(f0_guess)
-    Res = solver._check_integral_condition(sol_actual)
+    f0, (sol_eta, sol_x) = solver.find_f0(f0_guess)
+    Res = solver._check_integral_condition(sol_eta, sol_x)
     print(f"Solved f0:  {f0:.4f}")
     print(f"Residual:   {Res:.4e}")
     
-
-
+    # inverted_sol = solver.inverted_solve(sol_actual)
+    # print(sol_actual.y[:,-1])
+    # print(inverted_sol.y[:,-1])
     ################################################################
     # PLOTTING
 
     
     fig, ax = plt.subplots(1,2)
     
-    # PLOT [f, g, q] solver    
-    eta = sol_guessed.t
-    f, g, q = sol_guessed.y
-    fp = (solver.gamma*f - g/(f**(solver.a3)))/(solver.omega*eta)
-    ax[0].plot(eta, f, '--',  label =f"Guessed f(0) = {f0_guess:.4f}")
-    ax[1].plot(eta, q, '--',  label =f"Guessed f(0) = {f0_guess:.4f}")
+    # # PLOT [f, g, q] solver    
+    # eta = sol_guessed.t
+    # f, g, q = sol_guessed.y
+    # fp = (solver.gamma*f - g/(f**(solver.a3)))/(solver.omega*eta)
+    # ax[0].plot(eta, f, '--',  label =f"Guessed f(0) = {f0_guess:.4f}")
+    # ax[1].plot(eta, q, '--',  label =f"Guessed f(0) = {f0_guess:.4f}")
     
     # ACTUAL PROFILE
-    f, g, q = sol_actual.y
-    fp = (solver.gamma*f - g/(f**(solver.a3)))/(solver.omega*sol_actual.t)
-    ax[0].plot(sol_actual.t, f, '-',  label =f"Actual f(0) = {f0:.4f}")
-    ax[1].plot(sol_actual.t, q, '-',  label =f"Actual f(0) = {f0:.4f}")
+    f, g, q = sol_x
+    fp = (solver.gamma*f - g/(f**(solver.a3)))/(solver.omega*sol_eta)
+    ax[0].plot(sol_eta, f, '-',  label =f"Actual f(0) = {f0:.4f}")
+    ax[1].plot(sol_eta, q, '-',  label =f"Actual f(0) = {f0:.4f}")
     
     # PLOT POWER SERIES
-    xx = sol_actual.t
-    f, fp , q = solver.evaluate_power_series(xx, f0)
-    ax[0].plot(xx, f, '-.', label = "Power series")
-    ax[1].plot(xx, q, '-.', label = "Power series")
+    f, fp , q = solver.evaluate_power_series(sol_eta, f0)
+    ax[0].plot(sol_eta, f, '-.', label = "Power series")
+    ax[1].plot(sol_eta, q, '-.', label = "Power series")
 
-    ax[0].set_xlim(0, sol_actual.t[-1]*1.05)
-    ax[1].set_xlim(0, sol_actual.t[-1]*1.05)
+    ax[0].set_xlim(0, sol_eta[-1]*1.05)
+    ax[1].set_xlim(0, sol_eta[-1]*1.05)
 
 
     
