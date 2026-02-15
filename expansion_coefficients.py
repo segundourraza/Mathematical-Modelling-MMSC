@@ -2,16 +2,12 @@
 # coding: utf-8
 import numpy as np
 
-def Q0_expr(f,xi, C, G, f0, Q0, epsilon):
-    gamma = 1 / (C+G-xi)
-    omega = (C+G)*gamma / 2
+def Q0_expr(f, gamma, omega, xi, C, G, epsilon):
     return -((gamma*epsilon*f[0]**(C+G)
                  + G*gamma*epsilon*f[0]**(C+G)
                  - epsilon*omega*f[0]**(C+G)
                  + f[0]**xi) * f[1])
-def Q1_expr(f,xi, C, G, f0, Q0, epsilon):
-    gamma = 1 / (C+G-xi)
-    omega = (C+G)*gamma / 2
+def Q1_expr(f, gamma, omega, xi, C, G, epsilon):
     return -(f[0]**(-1+xi)*(xi*f[1]**2 + 2*f[0]*f[2])
                  + epsilon*(C*(gamma+G*gamma-omega)
                  *f[0]**(-1+C+G)*f[1]**2
@@ -20,9 +16,7 @@ def Q1_expr(f,xi, C, G, f0, Q0, epsilon):
                  *(G*f[1]**2 + 2*f[0]*f[2])))
 
 
-def Q2_expr(f,xi, C, G, f0, Q0, epsilon):
-    gamma = 1 / (C+G-xi)
-    omega = (C+G)*gamma / 2
+def Q2_expr(f, gamma, omega, xi, C, G, epsilon):
     return -(0.5*f[0]**(-2+xi)
                 *(-xi*f[1]**3 + xi**2*f[1]**3
                   + 6*xi*f[0]*f[1]*f[2]
@@ -42,9 +36,7 @@ def Q2_expr(f,xi, C, G, f0, Q0, epsilon):
                 ))
 
 
-def Q3_expr(f,xi, C, G, f0, Q0, epsilon):
-    gamma = 1 / (C+G-xi)
-    omega = (C+G)*gamma / 2
+def Q3_expr(f, gamma, omega, xi, C, G, epsilon):
     return -(1/6)*f[0]**(-3+xi)*(
             2*xi*f[1]**4
             - 3*xi**2*f[1]**4
@@ -100,9 +92,7 @@ def Q3_expr(f,xi, C, G, f0, Q0, epsilon):
                 - 96*omega*f[0]**(3+G)*f[4]
             )
         )
-def Q4_expr(f,xi, C, G, f0, Q0, epsilon):
-    gamma = 1 / (C + G - xi)
-    omega = (C + G) * gamma / 2
+def Q4_expr(f, gamma, omega, xi, C, G, epsilon):
     return (
         -(1/24)*f[0]**(-4+xi)*(
             -6*xi*f[1]**5
@@ -238,3 +228,12 @@ def coeffs_fq(xi, C, G, f0, Q0, epsilon):
              - A)
         f[k+1] = (q[k] - A) / B
     return f, q
+
+def evaluate_power_series(eta, xi, C, G, f0, q0, epsilon):
+    f, q = coeffs_fq(xi, C, G, f0, q0, epsilon)
+    f_poly = np.polynomial.Polynomial(f)
+    q_poly = np.polynomial.Polynomial(q)
+    print(f)
+    print(q)
+    print(f_poly(eta), f_poly.deriv(1)(eta), q_poly(eta))
+    return f_poly(eta), f_poly.deriv(1)(eta), q_poly(eta)
