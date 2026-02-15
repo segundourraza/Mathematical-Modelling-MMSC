@@ -207,14 +207,12 @@ def Q4_expr(f, gamma, omega, xi, C, G, epsilon):
         )
     )
 
-def coeffs_fq(xi, C, G, f0, Q0, epsilon):
+def coeffs_fq(gamma, omega, xi, C, G, f0, Q0, epsilon):
     "Returns column vector with coefficients of constant to 5th order expansions about eta= 0"
     f = np.zeros(6)
     q = np.zeros(6)
     f[0] = f0
     q[0] = Q0
-    gamma = 1 / (C+G-xi)
-    omega = (C+G)*gamma / 2
     Q_expressions = [Q0_expr,Q1_expr,Q2_expr,Q3_expr,Q4_expr]
     #Relations -(gamma -omega k )/ (i+1) f_k = q_k+1
     #Second relation Q_{k} = A + Bf_{k+1},where A and B only depend on lower order terms
@@ -227,12 +225,3 @@ def coeffs_fq(xi, C, G, f0, Q0, epsilon):
         B = (Q_expressions[k](f, gamma, omega, xi, C, G, epsilon) - A)
         f[k+1] = (q[k] - A) / B
     return f, q
-
-def evaluate_power_series(eta, xi, C, G, f0, q0, epsilon):
-    f, q = coeffs_fq(xi, C, G, f0, q0, epsilon)
-    f_poly = np.polynomial.Polynomial(f)
-    q_poly = np.polynomial.Polynomial(q)
-    print(f)
-    print(q)
-    print(f_poly(eta), f_poly.deriv(1)(eta), q_poly(eta))
-    return f_poly(eta), f_poly.deriv(1)(eta), q_poly(eta)
