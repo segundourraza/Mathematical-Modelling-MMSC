@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize import newton
 
 from solver import Solver
 
@@ -18,15 +17,15 @@ if __name__ == '__main__':
     f0_guess = 0.1
     # f0_guess = 0.6
     eta0 = 1e-2
-    eta0 = 1e-6
+    # eta0 = 1e-6
 
     
-    sol_eta, sol_x = solver.solve(f0=f0_guess, eta0 = eta0)
-    Res = solver._check_integral_condition(sol_eta, sol_x)
+    guessed_sol_eta, guessed_sol_x = solver.solve(f0=f0_guess, eta0 = eta0)
+    Res = solver._check_integral_condition(guessed_sol_eta, guessed_sol_x)
     print(f"Guessed f0: {f0_guess:.4f}")
     print(f"Residual:   {Res:.4e}")
 
-    f0, (sol_eta, sol_x) = solver.find_f0(f0_guess)
+    f0, (sol_eta, sol_x) = solver.find_f0(f0_guess, eta0)
     Res = solver._check_integral_condition(sol_eta, sol_x)
     print(f"Solved f0:  {f0:.4f}")
     print(f"Residual:   {Res:.4e}")
@@ -41,8 +40,8 @@ if __name__ == '__main__':
     fig, ax = plt.subplots(1,2)
     
     # # PLOT [f, g, q] solver    
-    # eta = sol_guessed.t
-    # f, g, q = sol_guessed.y
+    # eta = guessed_sol_eta
+    # f, g, q = guessed_sol_x
     # fp = (solver.gamma*f - g/(f**(solver.a3)))/(solver.omega*eta)
     # ax[0].plot(eta, f, '--',  label =f"Guessed f(0) = {f0_guess:.4f}")
     # ax[1].plot(eta, q, '--',  label =f"Guessed f(0) = {f0_guess:.4f}")

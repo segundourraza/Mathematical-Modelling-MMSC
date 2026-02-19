@@ -1,0 +1,119 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Wolfram 14.3' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       154,          7]
+NotebookDataLength[      3757,        111]
+NotebookOptionsPosition[      3086,         92]
+NotebookOutlinePosition[      3487,        108]
+CellTagsIndexPosition[      3444,        105]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"th", "[", "phi_", "]"}], " ", ":=", " ", 
+  RowBox[{
+   RowBox[{"(", 
+    RowBox[{"1", " ", "+", " ", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"a", "*", "phi"}], ")"}], "^", "n"}]}], ")"}], "^", 
+   RowBox[{"[", 
+    RowBox[{"-", "m"}], "]"}]}]}]], "Input",
+ CellChangeTimes->{{3.9805199515417767`*^9, 3.9805200158053074`*^9}, {
+  3.980520052556778*^9, 3.980520060232506*^9}, {3.9805201083814373`*^9, 
+  3.980520109526478*^9}},
+ CellLabel->"In[6]:=",ExpressionUUID->"339f83b9-5da6-224d-a760-33d7e1880598"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{"g", " ", "=", " ", 
+  RowBox[{"Solve", "[", 
+   RowBox[{
+    RowBox[{"th", " ", "==", " ", 
+     RowBox[{"th", "[", "phi", "]"}]}], ",", " ", "phi", ",", " ", 
+    RowBox[{"Assumptions", "->", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"n", ">", "0"}], ",", " ", 
+       RowBox[{"a", ">", "0"}], ",", " ", 
+       RowBox[{"th", " ", ">", " ", "0"}]}], "}"}]}]}], "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{"Reduce", "[", 
+  RowBox[{
+   RowBox[{"th", " ", "==", " ", 
+    RowBox[{"th", "[", "phi", "]"}]}], ",", " ", "phi"}], "]"}]}], "Input",
+ CellChangeTimes->{{3.9805200760737324`*^9, 3.980520083198889*^9}, {
+  3.980520147309614*^9, 3.9805201885419064`*^9}, {3.9805202193618164`*^9, 
+  3.9805203635885353`*^9}},ExpressionUUID->"deafb24a-d1e3-8841-96a2-\
+056d6d0afcfe"],
+
+Cell[BoxData[
+ TemplateBox[{
+  "Solve", "ifun", 
+   "\"Inverse functions are being used by \
+\\!\\(\\*RowBox[{\\\"Solve\\\"}]\\), so some solutions may not be found; use \
+Reduce for complete solution information.\"", 2, 18, 11, 22468283794315466153,
+    "Local"},
+  "MessageTemplate",
+  BaseStyle->"MSG"]], "Message",
+ CellChangeTimes->{{3.9805203301818123`*^9, 3.9805203570150814`*^9}},
+ CellLabel->
+  "During evaluation of \
+In[18]:=",ExpressionUUID->"3e9eba73-ae98-4e4a-8633-56e52befdb59"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"{", 
+   RowBox[{"phi", "\[Rule]", 
+    FractionBox[
+     SuperscriptBox[
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"-", "1"}], "+", 
+        SuperscriptBox["th", 
+         RowBox[{
+          RowBox[{"-", "1"}], "/", "m"}]]}], ")"}], 
+      FractionBox["1", "n"]], "a"]}], "}"}], "}"}]], "Output",
+ CellChangeTimes->{{3.9805200851190567`*^9, 3.98052011182374*^9}, 
+   3.9805201663474865`*^9, 3.980520211463272*^9, {3.9805202439111443`*^9, 
+   3.9805202712299614`*^9}, {3.98052030232699*^9, 3.980520357020771*^9}},
+ CellLabel->"Out[18]=",ExpressionUUID->"a17df785-f018-e943-a6ab-ba5a09aac522"]
+}, Open  ]]
+},
+WindowSize->{960, 532},
+WindowMargins->{{-5.5, Automatic}, {Automatic, -5.5}},
+FrontEndVersion->"14.3 for Microsoft Windows (64-bit) (July 8, 2025)",
+StyleDefinitions->"Default.nb",
+ExpressionUUID->"169bbc44-c1f9-3443-ac97-1ddade625352"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[554, 20, 549, 14, 28, "Input",ExpressionUUID->"339f83b9-5da6-224d-a760-33d7e1880598"],
+Cell[CellGroupData[{
+Cell[1128, 38, 802, 19, 47, "Input",ExpressionUUID->"deafb24a-d1e3-8841-96a2-056d6d0afcfe"],
+Cell[1933, 59, 493, 12, 26, "Message",ExpressionUUID->"3e9eba73-ae98-4e4a-8633-56e52befdb59"],
+Cell[2429, 73, 641, 16, 57, "Output",ExpressionUUID->"a17df785-f018-e943-a6ab-ba5a09aac522"]
+}, Open  ]]
+}
+]
+*)
+
