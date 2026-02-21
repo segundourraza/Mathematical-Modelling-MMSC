@@ -72,6 +72,7 @@ def inverted_ode(eta, x, gamma, omega, a1, a2, a3, epsilon):
     return [etap, gp, qp]
 
 class Solver:
+    ZERO_F = 1e-9
 
     def __init__(self, a1, a2, a3, Q0, epsilon):
         
@@ -94,7 +95,7 @@ class Solver:
 
     def __check_conditions(self):
         if self.a3 + self.a2 - self.a1 < 0:
-            raise ValueError("Coefficients do not satisfy inequality")
+            raise ValueError(f"Coefficients do not satisfy inequality, a3 + a2 - a1 ({self.a3 + self.a2 - self.a1}) >0")
 
     def evaluate_power_series(self,eta, f0):
         f, q = coeffs_fq(self.gamma, self.omega, self.xi, self.C, self.G, f0, self.Q0, self.epsilon)
@@ -124,9 +125,8 @@ class Solver:
         else:
             # Compute quantities at eta = deta
             f0, fp0, q0 = self.evaluate_power_series(eta0, f0)
-            
             if f0 < 0:
-                raise RuntimeError("try a larger value of f(0)")
+                raise FloatingPointError("try a larger value of f(0)")
             g0 = f0**(self.a3)*(self.gamma*f0 - self.omega*eta0*fp0)
             x0 = [f0, g0, q0]
 
@@ -144,13 +144,44 @@ class Solver:
         # Inverted Solve
         finverted_ode = lambda eta, x: inverted_ode(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
         i = -1
-        return solve_ivp(finverted_ode, [sol.y[0,i], 1e-9], [sol.t[i], sol.y[1,i], sol.y[2,i]],  
+        return solve_ivp(finverted_ode, [sol.y[0,i], self.ZERO_F], [sol.t[i], sol.y[1,i], sol.y[2,i]],  
                          rtol = 1e-10, atol = 1e-10,
                          first_step = 1e-8
                         )
         
     #########################################################################
     # ROOT FINDERS
+    def _update_f0(self, f0_guess, eta0, step = 0.1, max_iter = 50, direction = 1):
+        
+        def func(f0):
+            eta, x = self.solve(f0=f0, eta0 = eta0)
+            return self._check_integral_condition(eta, x)
+
+        try:        
+            f_old, R_old = f0_guess, func(f0_guess)
+        except FloatingPointError:
+            for _ in range(max_iter):
+                f0_guess = f0_guess+step*direction
+                try:
+                    f_old, R_old = f0_guess, func(f0_guess)
+                    break
+                except:
+                    continue
+            else:
+                raise RuntimeError()
+            
+        for iter in range(max_iter):
+            f_new = f0_guess + direction*step*iter
+            try:
+                R_new = func(f_new)
+            except:
+                continue
+            if R_old*R_new <= 0:
+                return brentq(func, f_old, f_new)
+            # update anchor in same direction
+            f_old, R_old = f_new, R_new
+        raise ValueError("Failed to find a bracket after scanning.")
+
 
     def find_f0(self, f0, eta0 = 1e-2, method = 'newton'):
         def func(f0):
@@ -219,6 +250,19 @@ class Solver:
 
 
 
+def execute_solver(a1, a2, a3, q0, epsilon, f0_guess, eta0):
+    solver = Solver(a1, a2, a3, q0, epsilon)
+    
+    f0, fp0, q0 = solver.evaluate_power_series(eta0, f0)
+    if f0 < 0:
+        try:
+            f0_guess = solver._update_f0(f0_guess, eta0)
+            print("Updated ")
+        except ValueError:
+            print("Failed to update f0 to physcial bracket")
+            raise RuntimeError
+    return solver.find_f0(f0_guess, eta0)
+    return solver.solve(f0_guess,eta0)
 
 
 
@@ -226,12 +270,12 @@ def find_root_forward(f, x0, step=0.1, xmax=100):
     x_left = x0
     f_left = f(x_left)
 
-    x = x_left + step
-    while x <= xmax:
-        f_right = f(x)
+    x_right = x_left + step
+    while x_right <= xmax:
+        f_right = f(x_right)
         if f_left * f_right <= 0:
-            return brentq(f, bracket=[x_left, x])
-        x_left, f_left = x, f_right
-        x += step
+            return brentq(f, x_left, x_right)
+        x_left, f_left = x_right, f_right
+        x_right += step
 
     raise ValueError("No root found in positive direction.")

@@ -1,78 +1,53 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from solver import Solver
+from solver import execute_solver
 
 
 if __name__ == '__main__':
     a1 = 2   # Power of D
     a2 = 3   # Power of K
     a3 = 0.8 # Power of tau
+    
+    
+    # a1 = 3   # Power of D
+    # a2 = 4   # Power of K
+    # a3 = 1   # Power of tau
+
+    # a1 = 4   # Power of D
+    # a2 = 5   # Power of K
+    # a3 = 2   # Power of tau
 
     q0 = 0.1 # Flux Pre-factor
     epsilon = 1
 
-    solver = Solver(a1, a2, a3, q0, epsilon)
 
-    f0_guess = 0.1
-    # f0_guess = 0.6
-    eta0 = 1e-2
-    # eta0 = 1e-6
+    f0_guess = 0.2
+    eta0 = 1e-4
 
     
-    guessed_sol_eta, guessed_sol_x = solver.solve(f0=f0_guess, eta0 = eta0)
-    Res = solver._check_integral_condition(guessed_sol_eta, guessed_sol_x)
-    print(f"Guessed f0: {f0_guess:.4f}")
-    print(f"Residual:   {Res:.4e}")
-
-    f0, (sol_eta, sol_x) = solver.find_f0(f0_guess, eta0)
-    Res = solver._check_integral_condition(sol_eta, sol_x)
-    print(f"Solved f0:  {f0:.4f}")
-    print(f"Residual:   {Res:.4e}")
-    
-    # inverted_sol = solver.inverted_solve(sol_actual)
-    # print(sol_actual.y[:,-1])
-    # print(inverted_sol.y[:,-1])
-    ################################################################
-    # PLOTTING
-
-    
-    fig, ax = plt.subplots(1,2)
-    
-    # # PLOT [f, g, q] solver    
-    # eta = guessed_sol_eta
-    # f, g, q = guessed_sol_x
-    # fp = (solver.gamma*f - g/(f**(solver.a3)))/(solver.omega*eta)
-    # ax[0].plot(eta, f, '--',  label =f"Guessed f(0) = {f0_guess:.4f}")
-    # ax[1].plot(eta, q, '--',  label =f"Guessed f(0) = {f0_guess:.4f}")
-    
-    # ACTUAL PROFILE
-    f, g, q = sol_x
-    fp = (solver.gamma*f - g/(f**(solver.a3)))/(solver.omega*sol_eta)
-    ax[0].plot(sol_eta, f, '-',  label =f"Actual f(0) = {f0:.4f}")
-    ax[1].plot(sol_eta, q, '-',  label =f"Actual f(0) = {f0:.4f}")
-    
-    # PLOT POWER SERIES
-    f, fp , q = solver.evaluate_power_series(sol_eta, f0)
-    ax[0].plot(sol_eta, f, '-.', label = "Power series")
-    ax[1].plot(sol_eta, q, '-.', label = "Power series")
-
-    ax[0].set_xlim(0, sol_eta[-1]*1.05)
-    ax[1].set_xlim(0, sol_eta[-1]*1.05)
+    fig, ax = plt.subplots()
+    f0, (eta, x) = execute_solver(a1, a2, a3, q0, epsilon, f0_guess, eta0)
+    ax.plot(eta, x[0])
+    ax.set_xlabel('$\\eta$')
+    ax.set_ylabel('$f(\\eta)$')
+    ax.grid()
+    plt.show()
 
 
-    
-    ax[0].legend()
-    [_.set_xlabel('$\\eta$') for _ in ax]
-    [_.grid() for _ in ax]
-    ax[0].set_ylabel('f($\\eta$)', rotation = 0, labelpad = 20)
-    ax[1].set_ylabel('q($\\eta$)', rotation = 0, labelpad = 20)
-    fig.tight_layout()
+    # a1_list = [2, 3, 4]
+    # a2_list = [3, 4, 5]
+    # a3_list = [0.8, 1, 2]
 
-    
-    
-    
-    
-    
-    
+    # fig, ax = plt.subplots()
+    # ls = ['-', '-.', '--']
+    # for i, (a1, a2, a3) in enumerate(zip(a1_list, a2_list, a3_list)):
+    #     eta, x = execute_solver(a1, a2, a3, q0, epsilon, f0_guess, eta0)
+    #     ax.plot(eta, x[0], linestyle = ls[i])
+    # ax.set_xlabel('$\\eta$')
+    # ax.set_ylabel('$f(\\eta)$')
+    # ax.grid()
+
+
+
     plt.show()
