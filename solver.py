@@ -68,7 +68,7 @@ def odeV2(eta, x, gamma, omega, a1, a2, a3, epsilon):
     """
     f, g, q = x
     fp = (gamma*f - g/(f**a3))/(omega*eta)
-    gp = (q + f**a1*fp)/(epsilon*f**(a2))
+    gp = (q - f**a1*fp)/(epsilon*f**(a2))
     qp = -gamma*f + omega*eta*fp    
     return np.array([fp, gp, qp])
 
