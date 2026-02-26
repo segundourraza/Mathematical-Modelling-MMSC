@@ -59,6 +59,10 @@ if __name__ == '__main__':
     a2 = 3   # Power of K
     a3 = 0.8 # Power of tau
     
+    # a1 = 3   # Power of D
+    # a2 = 2   # Power of K
+    # a3 = 0.8 # Power of tau
+    
     
     # a1 = 3   # Power of D
     # a2 = 4   # Power of K
@@ -80,10 +84,11 @@ if __name__ == '__main__':
     f0_low, f0_high = solver._find_valid_sol(f0_guess, eta0)
     print(f0_low, f0_high)
     
-    f0_search = np.linspace(f0_low, f0_high,1000)
+    f0_search = np.linspace(f0_low, f0_high,100)
+    # f0_search = np.linspace(f0_low, f0_high,100)
     sol_eta, sol_x = solver.solve(f0=f0_search, deta = eta0)
-    save(f0_search, sol_eta, sol_x)
-    # filename = 'sol1.pkl'
+    # save(f0_search, sol_eta, sol_x)
+    # filename = 'sol2.pkl'
     # with open(filename, 'rb') as f:
     #     f0_search, sol_eta, sol_x = pickle.load(f)
 
@@ -103,7 +108,8 @@ if __name__ == '__main__':
     print(f"Residual:   {Res2:.6e}")
     print()
     
-    sol3_f0, (sol3_eta, sol3_x) = solver.find_f0([sol1_f0, f0_high], method = 'brentq')
+    # sol3_f0, (sol3_eta, sol3_x) = solver.find_f0([sol1_f0, f0_high], method = 'brentq')
+    sol3_f0, (sol3_eta, sol3_x) = solver.find_f0([f0_high-1e-3, f0_high], method = 'brentq')
     Res3 = solver._check_integral_condition(sol3_eta, sol3_x)
     print(f"Solved f0:  {sol3_f0:.6f}")
     print(f"etaf:       {sol3_eta[-1]:.6f}")
@@ -148,6 +154,8 @@ if __name__ == '__main__':
     ax[0].plot(sol3_eta, f,   '-.',  color = 'k', label = "Power series", zorder = 1e7*2)
     ax[1].plot(sol3_f0,  Res3, 'o',  color = l.get_color(), zorder = 1e7)
     ax[0].legend()
+
+
     fig.tight_layout()
     # ax[0].set_xlim(0, max(sol1_eta[-1], sol2_eta[-1]))
     # ax[0].set_ylim(0, max(max(l1.get_ydata()), max(l2.get_ydata())))

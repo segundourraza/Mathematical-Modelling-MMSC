@@ -8,7 +8,7 @@ from tqdm import tqdm
 np.seterr(all='raise')
 
 
-def ode_old(eta, x, gamma, omega, a1, a2, a3, epsilon):
+def odeV1(eta, x, gamma, omega, a1, a2, a3, epsilon):
     """_summary_
 
     Parameters
@@ -24,12 +24,34 @@ def ode_old(eta, x, gamma, omega, a1, a2, a3, epsilon):
     x[2] = q
     """
     f, fp, q = x[0], x[1], x[2]
-    fpp = ((f**(a1)*fp + q)/(epsilon*f**(a2+a3)) + (a3*gamma + gamma-omega)*fp)/(omega*eta) - a3*fp**2/f
+    fpp = -((f**(a1)*fp + q)/(epsilon*f**(a2+a3)) + (a3*gamma + gamma-omega)*fp)/(omega*eta) - a3*fp**2/f
     qp = -gamma*f+ omega*eta*fp
     return fp, fpp, qp
 
 
-def ode(eta, x, gamma, omega, a1, a2, a3, epsilon):
+def inverted_odeV1(f, x, gamma, omega, a1, a2, a3, epsilon):
+    """Inverted ode for state-space [f,g,q]
+
+    Parameters
+    ----------
+    f : _type_
+        _description_
+    x : _type_
+        _description_
+
+    Note:
+    x[0] = eta
+    x[1] = f'
+    x[2] = q
+    """
+    eta, fp, q = x[0], x[1], x[2]
+    etap = 1/fp
+    fpp = -( (f**(a1)*fp + q)/(epsilon*f**(a2+a3)) + (a3*gamma + gamma-omega)*fp ) / (omega*eta) - a3*fp**2/f
+    qp = -gamma*f+ omega*eta*fp
+    return np.array([etap, fpp*etap, qp*etap])
+
+
+def odeV2(eta, x, gamma, omega, a1, a2, a3, epsilon):
     """_summary_
 
     Parameters
@@ -46,12 +68,12 @@ def ode(eta, x, gamma, omega, a1, a2, a3, epsilon):
     """
     f, g, q = x
     fp = (gamma*f - g/(f**a3))/(omega*eta)
-    gp = (-q - f**a1*fp)/(epsilon*f**(a2))
+    gp = (q + f**a1*fp)/(epsilon*f**(a2))
     qp = -gamma*f + omega*eta*fp    
     return np.array([fp, gp, qp])
 
-def inverted_ode(eta, x, gamma, omega, a1, a2, a3, epsilon):
-    """_summary_
+def inverted_odeV2(f, x, gamma, omega, a1, a2, a3, epsilon):
+    """Inverted ode for state-space [f,g,q]
 
     Parameters
     ----------
@@ -65,11 +87,14 @@ def inverted_ode(eta, x, gamma, omega, a1, a2, a3, epsilon):
     x[1] = g
     x[2] = q
     """
-    etap = (omega*eta)/(gamma*x[0] - x[1]/x[0]**(a3))
-    fp = 1/etap
-    gp = ((x[2] - x[0]**a1*fp)/(epsilon*x[0]**a2))*etap
-    qp = (gamma*x[0] - omega*eta*x[1])*etap
-    return [etap, gp, qp]
+    eta, g, q = x
+    fp = (gamma*f - g/(f**a3))/(omega*eta)
+    etap = 1/fp
+    gp = (q + f**a1*fp)/(epsilon*f**(a2))
+    qp = -gamma*f + omega*eta*fp    
+    return np.array([etap, gp*etap, qp*etap])
+
+
 
 class Solver:
     ZERO_F = 1e-9
@@ -88,8 +113,11 @@ class Solver:
         
         # Self-similarity parameters
         self.gamma: float = 1/(a2 + a3 - a1)
-        self.omega: float  = 0.5*(self.a1*self.gamma + 1)
+        # self.omega: float  = 0.5*(self.a1*self.gamma + 1)
+        self.omega: float  = 0.5*(self.a2+ self.a3)*self.gamma
         self.beta: float = self.gamma + self.omega - 1
+        self.beta = (self.a1 + 1)*self.gamma - self.omega
+        # self.beta: float =(self.a2 + 1)*self.gamma - self.omega
 
         self.__check_conditions()
 
@@ -105,53 +133,61 @@ class Solver:
         f_poly = np.polynomial.Polynomial(f)
         q_poly = np.polynomial.Polynomial(q)
         return f_poly(eta), f_poly.deriv(1)(eta), q_poly(eta)
-          
-    def solve_old(self, f0, eta0 = 1e-6):
-        # Compute quantities at eta = deta
-        f0, fp0, q0 = self.evaluate_power_series(eta0, f0)
-        x0 = [f0, 
-              fp0,
-              q0]
-        
-        fode = lambda eta, x: ode_old(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
-        sol = self._integrate(fode, x0, eta0)
-        return sol
     
-    def solve(self, f0, deta, ftol = 1e-2):
+    def solve(self, f0, deta, invert_fraction = 0.5, state_space = 1):
         if isinstance(f0, (list, tuple, np.ndarray)):
             nf0 = len(f0)
             a = [0]*nf0
             b = [0]*nf0
             for i in tqdm(range(nf0)):
-                a[i], b[i] = self.solve(f0[i], deta, ftol)
+                a[i], b[i] = self.solve(f0[i], deta, invert_fraction, state_space=state_space)
             return a, b
         else:
             # Compute quantities at eta = deta
             f_deta, fp_deta, q_deta = self.evaluate_power_series(deta, f0)
+            x_deta = [f_deta, fp_deta, q_deta]
             if f_deta < 0:
                 raise FloatingPointError("try a larger value of f(0)")
-            g_deta = f_deta**(self.a3)*(self.gamma*f_deta - self.omega*deta*fp_deta)
-            x_deta = [f_deta, g_deta, q_deta]
+            if state_space == 1:
+                self._ode = lambda eta, x: odeV1(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
+                inverted_solve = self.inverted_solveV1
+            elif state_space == 2:
+                x_deta[1] = f_deta**(self.a3)*(self.gamma*f_deta - self.omega*deta*fp_deta)
+                self._ode = lambda eta, x: odeV2(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
+                inverted_solve = self.inverted_solveV2
+            else:
+                raise ValueError()
+            
+            print(*x_deta)
 
             # Normal solve
-            self._ode = lambda eta, x: ode(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
-            sol = self._integrate(self._ode, x_deta, deta, ftol)
+            sol = self._integrate(self._ode, x_deta, deta, invert_fraction)
             if sol.status == 1:
-                inverted_sol = self.inverted_solve(sol)
+                inverted_sol = inverted_solve(sol)
                 return np.concatenate([sol.t[:-1], inverted_sol.y[0]]), np.column_stack([sol.y[:,:-1],np.vstack([inverted_sol.t, inverted_sol.y[1:]])])
             else:
                 return sol.t, sol.y
 
         
-    def inverted_solve(self, sol:OdeResult):
+    
+    def inverted_solveV1(self, sol:OdeResult):
         # Inverted Solve
-        finverted_ode = lambda eta, x: inverted_ode(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
-        i = -1
-        return solve_ivp(finverted_ode, [sol.y[0,i], self.ZERO_F], [sol.t[i], sol.y[1,i], sol.y[2,i]],  
+        self._inverted_ode = lambda f, x: inverted_odeV1(f, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
+        return solve_ivp(self._inverted_ode, [sol.y[0,-1], self.ZERO_F], [sol.t[-1], sol.y[1,-1], sol.y[2,-1]],
                          rtol = 1e-10, atol = 1e-10,
                          first_step = 1e-8
                         )
-        
+
+    def inverted_solveV2(self, sol:OdeResult):
+        # Inverted Solve
+        self._inverted_ode = lambda eta, x: inverted_odeV2(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
+        return solve_ivp(self._inverted_ode, [sol.y[0,-1], self.ZERO_F], [sol.t[-1], sol.y[1,-1], sol.y[2,-1]],  
+                         rtol = 1e-10, atol = 1e-10,
+                         first_step = 1e-8
+                        )
+    
+
+
     #########################################################################
     # ROOT FINDERS
 
@@ -224,23 +260,16 @@ class Solver:
 
     ###########################################################################
     # AUXILIARY METHODS
-    def __event(self, f0, ftol):
+    def __event(self, f0, invert_fraction):
         def zero_f(eta, x):
-            return x[0] > ftol
+            return x[0]/f0 > invert_fraction
         zero_f.terminal = True
         zero_f.direction = -1
         
         return (zero_f,)
         
-        def blowup_f(eta, x):
-            return x[0] < f0*10
-        blowup_f.terminal = True
-        blowup_f.direction = -1
-
-        return (zero_f, blowup_f)
-        
-    def _integrate(self, ode, x0, eta0, ftol):
-        return solve_ivp(ode, [eta0, 3], x0, rtol = 1e-10, atol = 1e-10, first_step = 1e-6, events=self.__event(x0[0], ftol), vectorized=True)
+    def _integrate(self, ode, x0, eta0, invert_fraction):
+        return solve_ivp(ode, [eta0, 3], x0, rtol = 1e-10, atol = 1e-10, first_step = 1e-6, events=self.__event(x0[0], invert_fraction), vectorized=True)
 
     def _check_integral_condition(self, eta, x):
         if all(isinstance(_, (list, np.ndarray)) for _ in eta):
