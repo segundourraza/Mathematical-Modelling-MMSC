@@ -34,16 +34,22 @@ if __name__ == '__main__':
     mask_func = lambda eta: eta > 0
     # mask_func = lambda eta: eta < 0.15
 
+    state_space = 1
     fig, ax = plt.subplots(1,2)
     fig, ax2 = plt.subplots(1,3)
-    eta, x = solver.solve(f0=f0_guess, deta = eta0, state_space=1)
-    print(x[0][-1])
+
+    eta, x = solver.solve(f0=f0_guess, deta = eta0, state_space=state_space, invert_fraction=0.1)
     mask = mask_func(eta)
 
     ax[0].plot(eta[mask], x[0][mask])
     ax[1].plot(eta[mask], x[2][mask])
-
     
+    eta, x = solver.solve(f0=f0_guess, deta = eta0, state_space=state_space, invert_fraction=0.5)
+    mask = mask_func(eta)
+
+    ax[0].plot(eta[mask], x[0][mask], '--')
+    ax[1].plot(eta[mask], x[2][mask], '--')
+
     # ee = np.linspace(0, eta[mask][-1], 100)
     # f, fp , q = solver.evaluate_power_series(ee, f0_guess)
     # ax[0].plot(ee, f,   '-.',  color = 'k', label = "Power series", zorder = 1e7*2, linewidth = 1.25)

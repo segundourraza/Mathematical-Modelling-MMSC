@@ -45,9 +45,11 @@ def inverted_odeV1(f, x, gamma, omega, a1, a2, a3, epsilon):
     x[2] = q
     """
     eta, fp, q = x[0], x[1], x[2]
+    
     etap = 1/fp
-    fpp = -( (f**(a1)*fp + q)/(epsilon*f**(a2+a3)) + (a3*gamma + gamma-omega)*fp ) / (omega*eta) - a3*fp**2/f
+    fpp = ( (f**(a1)*fp + q)/(epsilon*f**(a2+a3)) + (a3*gamma + gamma-omega)*fp ) / (omega*eta) - a3*fp**2/f
     qp = -gamma*f+ omega*eta*fp
+    return np.array([etap, 1/fpp, qp*etap])
     return np.array([etap, fpp*etap, qp*etap])
 
 
@@ -90,14 +92,14 @@ def inverted_odeV2(f, x, gamma, omega, a1, a2, a3, epsilon):
     eta, g, q = x
     fp = (gamma*f - g/(f**a3))/(omega*eta)
     etap = 1/fp
-    gp = (q + f**a1*fp)/(epsilon*f**(a2))
+    gp = -(q + f**a1*fp)/(epsilon*f**(a2))
     qp = -gamma*f + omega*eta*fp    
     return np.array([etap, gp*etap, qp*etap])
 
 
 
 class Solver:
-    ZERO_F = 0
+    ZERO_F = 1e-10
 
     def __init__(self, a1, a2, a3, Q0, epsilon):
         
@@ -164,7 +166,6 @@ class Solver:
             
             if sol.status == 1:
                 inverted_sol = inverted_solve(sol)
-                print(inverted_sol.t[[0,-1]])
                 return np.concatenate([sol.t[:-1], inverted_sol.y[0]]), np.column_stack([sol.y[:,:-1],np.vstack([inverted_sol.t, inverted_sol.y[1:]])])
             else:
                 return sol.t, sol.y
