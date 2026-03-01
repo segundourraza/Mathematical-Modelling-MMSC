@@ -38,13 +38,13 @@ if __name__ == '__main__':
     fig, ax = plt.subplots(1,2)
     fig, ax2 = plt.subplots(1,3)
 
-    eta, x = solver.solve(f0=f0_guess, deta = eta0, state_space=state_space, invert_fraction=0.1)
+    eta, x = solver.forward_integration(f0=f0_guess, deta = eta0, state_space=state_space, invert_fraction=0.1)
     mask = mask_func(eta)
 
     ax[0].plot(eta[mask], x[0][mask])
     ax[1].plot(eta[mask], x[2][mask])
     
-    eta, x = solver.solve(f0=f0_guess, deta = eta0, state_space=state_space, invert_fraction=0.5)
+    eta, x = solver.forward_integration(f0=f0_guess, deta = eta0, state_space=state_space, invert_fraction=0.5)
     mask = mask_func(eta)
 
     ax[0].plot(eta[mask], x[0][mask], '--')
