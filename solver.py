@@ -24,7 +24,7 @@ def odeV1(eta, x, gamma, omega, a1, a2, a3, epsilon):
     x[2] = q
     """
     f, fp, q = x[0], x[1], x[2]
-    fpp = +((f**(a1)*fp + q)/(epsilon*f**(a2+a3)) + (a3*gamma + gamma-omega)*fp)/(omega*eta) - a3*fp**2/f
+    fpp = ((f**(a1)*fp + q)/(epsilon*f**(a2+a3)) + (a3*gamma + gamma-omega)*fp)/(omega*eta) - a3*fp**2/f
     qp = -gamma*f+ omega*eta*fp
     return fp, fpp, qp
 
@@ -47,9 +47,8 @@ def inverted_odeV1(f, x, gamma, omega, a1, a2, a3, epsilon):
     eta, fp, q = x[0], x[1], x[2]
     
     etap = 1/fp
-    fpp = ( (f**(a1)*fp + q)/(epsilon*f**(a2+a3)) + (a3*gamma + gamma-omega)*fp ) / (omega*eta) - a3*fp**2/f
+    fpp = ((f**(a1)*fp + q)/(epsilon*f**(a2+a3)) + (a3*gamma + gamma-omega)*fp ) / (omega*eta) - a3*fp**2/f
     qp = -gamma*f+ omega*eta*fp
-    return np.array([etap, 1/fpp, qp*etap])
     return np.array([etap, fpp*etap, qp*etap])
 
 
