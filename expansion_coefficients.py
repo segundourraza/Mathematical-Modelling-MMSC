@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 import numpy as np
-
+import scipy as sc
 def Q0_expr(f, gamma, omega, xi, C, G, epsilon):
     return -((gamma*epsilon*f[0]**(C+G)
                  + G*gamma*epsilon*f[0]**(C+G)
@@ -225,3 +225,44 @@ def coeffs_fq(gamma, omega, xi, C, G, f0, Q0, epsilon):
         B = (Q_expressions[k](f, gamma, omega, xi, C, G, epsilon) - A)
         f[k+1] = (q[k] - A) / B
     return f, q
+
+def evaluate_power_series(eta, xi, C, G, f0, q0, epsilon):
+    f, q = coeffs_fq(xi, C, G, f0, q0, epsilon)
+    f_poly = np.polynomial.Polynomial(f)
+    q_poly = np.polynomial.Polynomial(q)
+    print(f)
+    print(q)
+    print(f_poly(eta), f_poly.deriv(1)(eta), q_poly(eta))
+    return f_poly(eta), f_poly.deriv(1)(eta), q_poly(eta)
+
+#Coeffs backward direction. solved for f0,q0,Coeffs backward direction,starting
+# from some f and q evaulated at delta eta
+def coeffs_backwards(f0_guess,q0_guess,delt_eta,f_delt_eta,q_delt_eta,xi,C,G,epsilon):
+#Returns f0,q0,and column vector for coeffs f and q. Requires an initial guess
+#of f0,q0, f_delt_eta/q_delt_eta, and delt_eta values,and usual expoents and epsilon
+    def residual(x):
+            f0_guess,q0_guess = x
+            f,q = coeffs_fq(xi, C, G, f0_guess, q0_guess, epsilon)
+            f_taylor= np.sum([f[i]*delt_eta**i for i in range(6)])
+            q_taylor= np.sum([q[i]*delt_eta**i for i in range(6)])
+            return np.array([f_delt_eta- f_taylor,
+                            q_delt_eta-q_taylor],dtype=float)
+    x0 =np.array([f0_guess,q0_guess])
+    sol= sc.optimize.root(residual,x0 =x0 )
+    if not sol.success:
+        raise RuntimeError(sol.message)
+    f0_sol,q0_sol = sol.x
+    #coeffs for the solution:
+    f_coeffs,q_coeffs = coeffs_fq(xi,C,G,f0_sol,q0_sol,epsilon)
+    return f0_sol, q0_sol,f_coeffs,q_coeffs
+#Polynomial Backward direction
+def evaluate_power_series_backwards(eta,f0,q0,delt_eta,f_delt_eta,q_delt_eta, xi, C, G,epsilon):
+    f0,q0,f,q = coeffs_backwards(f0,q0,delt_eta,f_delt_eta,q_delt_eta,xi, C, G,epsilon)
+    f_poly = np.polynomial.Polynomial(f)
+    q_poly = np.polynomial.Polynomial(q)
+    print(f0," calculated f0")
+    print(q0,"calculated q0")
+    print(f)
+    print(q)
+    print(f_poly(eta), f_poly.deriv(1)(eta), q_poly(eta))
+    return f_poly(eta), f_poly.deriv(1)(eta), q_poly(eta),f0,q0
