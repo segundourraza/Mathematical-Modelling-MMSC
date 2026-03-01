@@ -24,7 +24,7 @@ def odeV1(eta, x, gamma, omega, a1, a2, a3, epsilon):
     x[2] = q
     """
     f, fp, q = x[0], x[1], x[2]
-    fpp = -((f**(a1)*fp + q)/(epsilon*f**(a2+a3)) + (a3*gamma + gamma-omega)*fp)/(omega*eta) - a3*fp**2/f
+    fpp = +((f**(a1)*fp + q)/(epsilon*f**(a2+a3)) + (a3*gamma + gamma-omega)*fp)/(omega*eta) - a3*fp**2/f
     qp = -gamma*f+ omega*eta*fp
     return fp, fpp, qp
 
@@ -68,8 +68,8 @@ def odeV2(eta, x, gamma, omega, a1, a2, a3, epsilon):
     """
     f, g, q = x
     fp = (gamma*f - g/(f**a3))/(omega*eta)
-    gp = (q - f**a1*fp)/(epsilon*f**(a2))
-    qp = -gamma*f + omega*eta*fp    
+    gp = -(q + f**a1*fp)/(epsilon*f**(a2))
+    qp = -gamma*f + omega*eta*fp
     return np.array([fp, gp, qp])
 
 def inverted_odeV2(f, x, gamma, omega, a1, a2, a3, epsilon):
@@ -97,7 +97,7 @@ def inverted_odeV2(f, x, gamma, omega, a1, a2, a3, epsilon):
 
 
 class Solver:
-    ZERO_F = 1e-9
+    ZERO_F = 0
 
     def __init__(self, a1, a2, a3, Q0, epsilon):
         
@@ -134,7 +134,7 @@ class Solver:
         q_poly = np.polynomial.Polynomial(q)
         return f_poly(eta), f_poly.deriv(1)(eta), q_poly(eta)
     
-    def solve(self, f0, deta, invert_fraction = 0.5, state_space = 1):
+    def solve(self, f0, deta, invert_fraction = 0.1, state_space = 1):
         if isinstance(f0, (list, tuple, np.ndarray)):
             nf0 = len(f0)
             a = [0]*nf0
@@ -158,12 +158,13 @@ class Solver:
             else:
                 raise ValueError()
             
-            print(*x_deta)
-
             # Normal solve
             sol = self._integrate(self._ode, x_deta, deta, invert_fraction)
+            # return sol.t, sol.y
+            
             if sol.status == 1:
                 inverted_sol = inverted_solve(sol)
+                print(inverted_sol.t[[0,-1]])
                 return np.concatenate([sol.t[:-1], inverted_sol.y[0]]), np.column_stack([sol.y[:,:-1],np.vstack([inverted_sol.t, inverted_sol.y[1:]])])
             else:
                 return sol.t, sol.y
@@ -315,6 +316,7 @@ def find_bracket_forward(f, x0, step=0.01, xmax=1, tol = 1e-10, max_iter = 100):
     x_right = x_left + step
     while x_right <= xmax:
         f_right = f(x_right)
+        print(x_right, f_right)
         if f_right == 0:
             x_low = binary_search_left(f, x_left, x_right, tol = tol, max_iter=max_iter)
             break

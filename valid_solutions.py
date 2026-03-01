@@ -84,16 +84,18 @@ if __name__ == '__main__':
     f0_low, f0_high = solver._find_valid_sol(f0_guess, eta0)
     print(f0_low, f0_high)
     
+    f0_low, f0_high  = f0_guess, 3*f0_guess
+
     f0_search = np.linspace(f0_low, f0_high,100)
-    # f0_search = np.linspace(f0_low, f0_high,100)
     sol_eta, sol_x = solver.solve(f0=f0_search, deta = eta0)
-    # save(f0_search, sol_eta, sol_x)
-    # filename = 'sol2.pkl'
-    # with open(filename, 'rb') as f:
-    #     f0_search, sol_eta, sol_x = pickle.load(f)
+    save(f0_search, sol_eta, sol_x)
+    filename = 'sol2.pkl'
+    with open(filename, 'rb') as f:
+        f0_search, sol_eta, sol_x = pickle.load(f)
 
 
 
+    sol1_f0, (sol1_eta, sol1_x) = solver.find_f0(f0_guess, eta0=eta0) 
     sol1_f0, (sol1_eta, sol1_x) = solver.find_f0(0.5*(f0_high + f0_low), eta0=eta0) 
     Res1 = solver._check_integral_condition(sol1_eta, sol1_x)
     print(f"Solved f0:  {sol1_f0:.6f}")
@@ -101,20 +103,20 @@ if __name__ == '__main__':
     print(f"Residual:   {Res1:.6e}")
     print()
 
-    sol2_f0, (sol2_eta, sol2_x) = solver.find_f0([f0_low, sol1_f0-1e-3],  eta0=eta0, method = 'brentq')
-    Res2 = solver._check_integral_condition(sol2_eta, sol2_x)
-    print(f"Solved f0:  {sol2_f0:.6f}")
-    print(f"etaf:       {sol2_eta[-1]:.6f}")
-    print(f"Residual:   {Res2:.6e}")
-    print()
+    # sol2_f0, (sol2_eta, sol2_x) = solver.find_f0([f0_low, sol1_f0-1e-3],  eta0=eta0, method = 'brentq')
+    # Res2 = solver._check_integral_condition(sol2_eta, sol2_x)
+    # print(f"Solved f0:  {sol2_f0:.6f}")
+    # print(f"etaf:       {sol2_eta[-1]:.6f}")
+    # print(f"Residual:   {Res2:.6e}")
+    # print()
     
-    # sol3_f0, (sol3_eta, sol3_x) = solver.find_f0([sol1_f0, f0_high], method = 'brentq')
-    sol3_f0, (sol3_eta, sol3_x) = solver.find_f0([f0_high-1e-3, f0_high], method = 'brentq')
-    Res3 = solver._check_integral_condition(sol3_eta, sol3_x)
-    print(f"Solved f0:  {sol3_f0:.6f}")
-    print(f"etaf:       {sol3_eta[-1]:.6f}")
-    print(f"Residual:   {Res3:.6e}")
-    print()
+    # # sol3_f0, (sol3_eta, sol3_x) = solver.find_f0([sol1_f0, f0_high], method = 'brentq')
+    # sol3_f0, (sol3_eta, sol3_x) = solver.find_f0([f0_high-1e-3, f0_high], method = 'brentq')
+    # Res3 = solver._check_integral_condition(sol3_eta, sol3_x)
+    # print(f"Solved f0:  {sol3_f0:.6f}")
+    # print(f"etaf:       {sol3_eta[-1]:.6f}")
+    # print(f"Residual:   {Res3:.6e}")
+    # print()
     
     fig, ax = plt.subplots(1,2)
     ax[0].set_ylabel("$f(\\eta)$")
@@ -137,23 +139,23 @@ if __name__ == '__main__':
     ax[1].plot(f0_search, Res, '-')
 
 
-    # PLOT POWER SERIES
-    ee = np.linspace(0, sol1_eta[-1], 100)
-    f, fp , q = solver.evaluate_power_series(ee, sol1_f0)
-    l, = ax[0].plot(sol1_eta, sol1_x[0], 'r', zorder = 1e7, linewidth = 2, label = f"f(0) = {sol1_f0:.4f}")
-    ax[0].plot(ee, f,   '-.',  color = 'k', label = "Power series", zorder = 1e7*2, linewidth = 1.25)
-    ax[1].plot(sol1_f0,  Res1, 'o',  color = l.get_color(), zorder = 1e7)
+    # # PLOT POWER SERIES
+    # ee = np.linspace(0, sol1_eta[-1], 100)
+    # f, fp , q = solver.evaluate_power_series(ee, sol1_f0)
+    # l, = ax[0].plot(sol1_eta, sol1_x[0], 'r', zorder = 1e7, linewidth = 2, label = f"f(0) = {sol1_f0:.4f}")
+    # ax[0].plot(ee, f,   '-.',  color = 'k', label = "Power series", zorder = 1e7*2, linewidth = 1.25)
+    # ax[1].plot(sol1_f0,  Res1, 'o',  color = l.get_color(), zorder = 1e7)
     
-    f, fp , q = solver.evaluate_power_series(sol2_eta, sol2_f0)
-    l, = ax[0].plot(sol2_eta, sol2_x[0], 'm', zorder = 1e7, label = f"f(0) = {sol2_f0:.4f}")
-    ax[0].plot(sol2_eta, f,   '-.',  color = 'k', label = "Power series", zorder = 1e7*2)
-    ax[1].plot(sol2_f0,  Res2, 'o',  color = l.get_color(), zorder = 1e7)
+    # f, fp , q = solver.evaluate_power_series(sol2_eta, sol2_f0)
+    # l, = ax[0].plot(sol2_eta, sol2_x[0], 'm', zorder = 1e7, label = f"f(0) = {sol2_f0:.4f}")
+    # ax[0].plot(sol2_eta, f,   '-.',  color = 'k', label = "Power series", zorder = 1e7*2)
+    # ax[1].plot(sol2_f0,  Res2, 'o',  color = l.get_color(), zorder = 1e7)
     
-    f, fp , q = solver.evaluate_power_series(sol3_eta, sol3_f0)
-    l, = ax[0].plot(sol3_eta, sol3_x[0], 'lime', zorder = 1e7, label = f"f(0) = {sol3_f0:.4f}")
-    ax[0].plot(sol3_eta, f,   '-.',  color = 'k', label = "Power series", zorder = 1e7*2)
-    ax[1].plot(sol3_f0,  Res3, 'o',  color = l.get_color(), zorder = 1e7)
-    ax[0].legend()
+    # f, fp , q = solver.evaluate_power_series(sol3_eta, sol3_f0)
+    # l, = ax[0].plot(sol3_eta, sol3_x[0], 'lime', zorder = 1e7, label = f"f(0) = {sol3_f0:.4f}")
+    # ax[0].plot(sol3_eta, f,   '-.',  color = 'k', label = "Power series", zorder = 1e7*2)
+    # ax[1].plot(sol3_f0,  Res3, 'o',  color = l.get_color(), zorder = 1e7)
+    # ax[0].legend()
 
 
     fig.tight_layout()
