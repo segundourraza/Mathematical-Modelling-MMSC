@@ -276,24 +276,28 @@ class Solver:
         fpp_s = fpp_func(eta_s)
         qs = -f_s**(self.a1)*fp_s - self.epsilon*f_s**(self.a2+self.a3)*(((self.a3+1)*self.gamma - self.omega)*fp_s\
                                                                         - self.omega*eta_s*(fpp_s + self.a3*(fp_s)**2/f_s))
-        
         # INTEGRATE
-
-        def events(f,x):
+        def event_flip(f,x):
             return abs(x[1]) > fp_condition
-        events.terminal = True
+        event_flip.terminal = True
+        
+        def event_zero(f,x):
+            return x[0] > eta_floor
+        event_zero.terminal = True
 
         xs = [eta_s, fp_s, qs]
-        inverted_sol = solve_ivp(self._inverted_ode, [f_s,10], xs, events=events,
+        inverted_sol = solve_ivp(self._inverted_ode, [f_s,10], xs, events=(event_flip, event_zero, ),
                                 rtol = 1e-10, atol = 1e-10, first_step = 1e-8,
                                 vectorized=True,)
-        # return inverted_sol.y[0][::-1], np.flip(np.vstack([inverted_sol.t, inverted_sol.y[1:]]), axis = 1)
-        sol = solve_ivp(self._ode, [inverted_sol.y[0,-1], eta_floor], [inverted_sol.t[-1], inverted_sol.y[1,-1], inverted_sol.y[2,-1]],
-                        rtol = 1e-10, atol = 1e-10, first_step = 1e-8,
-                        vectorized=True)
-        return np.concatenate([inverted_sol.y[0], sol.t[1:]])[::-1],\
-                np.column_stack([np.vstack([inverted_sol.t, inverted_sol.y[1:]]), sol.y[:,1:]])[:,::-1]
-        
+        if inverted_sol.status == 1 and inverted_sol.y[0,-1] < eta_floor:
+            return inverted_sol.y[0][::-1], np.flip(np.vstack([inverted_sol.t, inverted_sol.y[1:]]), axis = 1)
+        else:
+            sol = solve_ivp(self._ode, [inverted_sol.y[0,-1], eta_floor], [inverted_sol.t[-1], inverted_sol.y[1,-1], inverted_sol.y[2,-1]],
+                            rtol = 1e-10, atol = 1e-10, first_step = 1e-8,
+                            vectorized=True)
+            return np.concatenate([inverted_sol.y[0], sol.t[1:]])[::-1],\
+                    np.column_stack([np.vstack([inverted_sol.t, inverted_sol.y[1:]]), sol.y[:,1:]])[:,::-1]
+            
 
     #########################################################################
     # ROOT FINDERS

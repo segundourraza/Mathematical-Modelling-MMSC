@@ -16,11 +16,14 @@ if __name__ == '__main__':
     a1 = 2   # Power of D
     a2 = 3   # Power of K
     a3 = 0.8 # Power of tau
-
     
-    # a1 = 1.8   # Power of D
-    # a2 = 3   # Power of K
-    # a3 = 0.8 # Power of tau
+    a1 = 3   # Power of D
+    a2 = 4   # Power of K
+    a3 = 1   # Power of tau
+
+    # a1 = 9   # Power of D
+    # a2 = 10   # Power of K
+    # a3 = 1   # Power of tau
     
     epsilon = 0.1
     Q0 = 0.1
@@ -33,7 +36,12 @@ if __name__ == '__main__':
     # FINDING SOLUTION
 
     eta_f_guess = 0.1
-    f_start = 1e-7
+    f_start = 1e-4
+    
+    eta_f_guess = 1.0
+    f_start = 1e-1
+
+    
     sol1_eta, sol1_x = solver.backward_integrator(eta_f_guess, f_start=f_start)
     sol1_dx = solver._ode(sol1_eta, sol1_x)
     sol1_f0 = sol1_x[0][0]
@@ -44,8 +52,11 @@ if __name__ == '__main__':
     print(f"Residual:   {Res1:.6e}")
     print()
 
+    plt.plot(sol1_eta, sol1_x[0])
+    plt.show()
     
     sol2_etaf, (sol2_eta, sol2_x) = solver.find_etaf(eta_f_guess,f_start=f_start)
+    # sol2_etaf, (sol2_eta, sol2_x) = solver.find_etaf([eta_f_guess, 1],f_start=f_start, method='brentq')
     sol2_dx = solver._ode(sol2_eta, sol2_x)
     sol2_f0 = sol2_x[0][0]
     Res2 = solver._check_integral_condition(sol2_eta, sol2_x)
@@ -62,14 +73,32 @@ if __name__ == '__main__':
         
         ax[0][i].plot(sol2_eta, sol2_x[i], label = "$\\eta = {:.4f}$".format(sol2_etaf))
         ax[1][i].semilogy(sol2_eta, abs(sol2_dx[i]))
+    
+    ee = np.linspace(0, sol1_eta[-1], 100)
+    f, fp , q = solver.evaluate_power_series(ee, sol1_f0)
+    ax[0][0].plot(ee, f,   '-.',  color = 'k', label = "Power series", zorder = 1e7*2, linewidth = 1.25)
+    ax[0][2].plot(ee, q,   '-.',  color = 'k', label = "Power series", zorder = 1e7*2, linewidth = 1.25)
+    
+    ee = np.linspace(0, sol2_eta[-1], 100)
+    f, fp , q = solver.evaluate_power_series(ee, sol2_f0)
+    ax[0][0].plot(ee, f,   '-.',  color = 'k', label = "Power series", zorder = 1e7*2, linewidth = 1.25)
+    ax[0][2].plot(ee, q,   '-.',  color = 'k', label = "Power series", zorder = 1e7*2, linewidth = 1.25)
+    
+
+
 
     # # for line in ax[0][1].get_lines():
     # #     y = line.get_ydata()
     # #     line.set_ydata(abs(y))
     # ax[0][1].set_yscale('log')
-    ax[0][0].set_xlim(0)
-    ax[0][0].set_ylim(0)
-
+    
+    ax[0][0].set_xlim(0, max(sol1_etaf, sol2_etaf)*1.1)
+    ax[0][0].set_ylim(0, max(sol1_x[0][0], sol2_x[0][0])*1.1)
+    
+    ax[0][2].set_xlim(0, max(sol1_etaf, sol2_etaf)*1.1)
+    ax[0][2].set_ylim(0, max(sol1_x[2][0], sol2_x[2][0])*1.1)
+    
+    
 
     ax[0][0].set_ylabel("$f(\\eta)$")
     ax[0][1].set_ylabel("$f^\\prime(\\eta)$")
@@ -85,36 +114,36 @@ if __name__ == '__main__':
     fig.tight_layout()
 
 
-    ###################################################################################
-    # PARAMETRIC SEARCH STUDY
+    # ###################################################################################
+    # # PARAMETRIC SEARCH STUDY
 
     
 
 
-    eta_f_guess = np.linspace(0.1, 1, 100)
-    f_start = 1e-4
-    eta_data = []
-    x_data = []
-    res_data = []
-    fig, ax = plt.subplots(1,2)
-    for efg in tqdm(eta_f_guess):
-        _eta, _x = solver.backward_integrator(efg, f_start=f_start)
-        ax[0].plot(_eta, _x[0], linewidth = 0.25)
-        res_data.append(solver._check_integral_condition(_eta, _x))
-        eta_data.append(_eta)
-        x_data.append(_x)
-    ax[1].plot(eta_f_guess, res_data)
+    # eta_f_guess = np.linspace(0.1, 1, 100)
+    # f_start = 1e-4
+    # eta_data = []
+    # x_data = []
+    # res_data = []
+    # fig, ax = plt.subplots(1,2)
+    # for efg in tqdm(eta_f_guess):
+    #     _eta, _x = solver.backward_integrator(efg, f_start=f_start)
+    #     ax[0].plot(_eta, _x[0], linewidth = 0.25)
+    #     res_data.append(solver._check_integral_condition(_eta, _x))
+    #     eta_data.append(_eta)
+    #     x_data.append(_x)
+    # ax[1].plot(eta_f_guess, res_data)
 
-    ax[0].plot(sol2_eta, sol2_x[0], '-r')
-    ax[1].plot(sol2_etaf, Res2, 'xr')
+    # ax[0].plot(sol2_eta, sol2_x[0], '-r')
+    # ax[1].plot(sol2_etaf, Res2, 'xr')
 
     
-    ax[0].set_ylabel("$f(\\eta)$")
-    ax[0].set_xlabel("$\\eta$")
-    ax[1].set_xlabel("$f_0$")
-    ax[1].set_ylabel("Residual")
-    ax[0].grid()
-    ax[1].grid()
+    # ax[0].set_ylabel("$f(\\eta)$")
+    # ax[0].set_xlabel("$\\eta$")
+    # ax[1].set_xlabel("$\\eta_f$")
+    # ax[1].set_ylabel("Residual")
+    # ax[0].grid()
+    # ax[1].grid()
 
 
     plt.show()
