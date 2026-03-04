@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Callable
 from enum import Enum, auto
 
@@ -131,7 +132,33 @@ A_COMPUTERS: dict[CaseType, Callable[[float, float, float], float]] = {
 }
 
 
+@dataclass
+class Solution:
 
+    a1: float
+    a2: float
+    a3: float
+    
+    omega: float
+    gamma: float
+    beta: float
+    
+    Q0: float
+    epsilon:float
+
+    eta: np.ndarray
+    x: np.ndarray
+    
+    def __post_init__(self):
+        self.eta_f = self.eta[-1]
+        self.f0 = self.x[0][0]
+        
+        I = np.trapezoid(self.x[0], self.eta)
+        self.res = I - self.Q0/(self.beta+1)
+
+    def xf(self,t):
+        return self.eta_f*t**self.omega
+    
 class Solver:
     ZERO_F = 1e-10
 
@@ -217,7 +244,7 @@ class Solver:
     # BACKWARD INTEGRATOR
 
     def find_etaf(self, etaf_guess, case:CaseType = CaseType.CaseA2, f_start = 1e-3, eta_floor = 1e-9, fp_condition = 1,
-                         method = 'newton'):
+                         method = 'newton')->Solution:
         def func(eta_f):
             eta, x = self.backward_integrator(eta_f=eta_f,case=case, f_start=f_start, eta_floor=eta_floor, fp_condition=fp_condition)
             return self._check_integral_condition(eta, x)
@@ -234,8 +261,9 @@ class Solver:
                 raise ValueError("For 'brentq' method 'f0' must be an interval")
         else:
             raise ValueError("'f0_span' must be a float to initialize a 'newton' root finder, or a list of length 2 to initialize a 'brentq' root finder.")
-        return eta_f, self.backward_integrator(eta_f=eta_f,case=case, f_start=f_start, eta_floor=eta_floor, fp_condition=fp_condition)
-
+        eta, x = self.backward_integrator(eta_f=eta_f,case=case, f_start=f_start, eta_floor=eta_floor, fp_condition=fp_condition)
+        return Solution(self.a1, self.a2, self.a3, self.omega, self.gamma, self.beta, self.Q0, self.epsilon, eta, x)
+        
 
     def backward_integrator(self, eta_f, case:CaseType = CaseType.CaseA2, f_start = 1e-3, eta_floor = 1e-9, fp_condition = 1, state_space = 1):
 
@@ -398,6 +426,10 @@ class Solver:
     
     @property
     def G(self): return self.a3
+
+
+    def xf(self,t,eta_f):
+        return eta_f*t**self.omega
 
 
 

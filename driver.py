@@ -1,7 +1,16 @@
+from tqdm import tqdm
+from typing import List
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
 
-from solver import execute_solver
+from solver import Solver, Solution
+
+plt.rcParams.update({'font.size': 14})
+plt.rcParams.update({
+    "mathtext.fontset": "cm",   # Computer Modern
+    "font.family": "serif"
+})
 
 
 if __name__ == '__main__':
@@ -18,36 +27,51 @@ if __name__ == '__main__':
     # a2 = 5   # Power of K
     # a3 = 2   # Power of tau
 
-    q0 = 0.1 # Flux Pre-factor
     epsilon = 1
 
+    etaf_guess = 0.1
 
-    f0_guess = 0.2
-    eta0 = 1e-4
+    sols:List[Solution] = []
+    # for Q0 in tqdm(np.linspace(0.01, 0.9, 5)):
+    for Q0 in tqdm(np.logspace(-1, 1, 5)):
+        solver = Solver(a1, a2, a3, Q0, epsilon)
+        sols.append(solver.find_etaf(etaf_guess))
+    
+
+    fig1, ax1 = plt.subplots()
+    for sol in sols:
+        ax1.plot(sol.eta, sol.x[0], label = "$Q_0 = {}$".format(sol.Q0))
+    ax1.set_xlabel('$\\eta$')
+    ax1.set_ylabel('$f(\\eta)$')
+    ax1.grid()
+    ax1.legend()
+
+    t = np.linspace(1e-1,10, 1000)
+    fig2, ax2 = plt.subplots()
+    # fig3, ax3 = plt.subplots()
+    for sol in sols:
+        ax2.semilogy(sol.xf(t), t, label = "$Q_0 = {}$".format(sol.Q0))
+    
+    ax2.legend()
+    ax2.set_ylim(t[0])
+    ax2.set_xlabel("$x_f$")
+    ax2.set_ylabel("$t$", rotation = 0)
+    ax2.grid(which='major', linestyle='-', linewidth=0.8)
+    ax2.grid(which='minor', linestyle='-', linewidth=0.25)
+    
+    fig2.tight_layout()
 
     
+
+    T,E = np.meshgrid(t, sols[0].eta)
+    
+    interp = interp1d(sols[0].eta, sols[0].x[0], fill_value="extrapolate")
+    X = E*T**sols[0].omega 
+    Z =T**sols[0].gamma*interp(X/T**sols[0].gamma)
+
     fig, ax = plt.subplots()
-    f0, (eta, x) = execute_solver(a1, a2, a3, q0, epsilon, f0_guess, eta0)
-    ax.plot(eta, x[0])
-    ax.set_xlabel('$\\eta$')
-    ax.set_ylabel('$f(\\eta)$')
-    ax.grid()
-    plt.show()
-
-
-    # a1_list = [2, 3, 4]
-    # a2_list = [3, 4, 5]
-    # a3_list = [0.8, 1, 2]
-
-    # fig, ax = plt.subplots()
-    # ls = ['-', '-.', '--']
-    # for i, (a1, a2, a3) in enumerate(zip(a1_list, a2_list, a3_list)):
-    #     eta, x = execute_solver(a1, a2, a3, q0, epsilon, f0_guess, eta0)
-    #     ax.plot(eta, x[0], linestyle = ls[i])
-    # ax.set_xlabel('$\\eta$')
-    # ax.set_ylabel('$f(\\eta)$')
-    # ax.grid()
-
-
+    cf = ax.contourf(X, T, Z, levels = 100)
+    ax.set_yscale('log')
+    fig.colorbar(cf, ax=ax)
 
     plt.show()
