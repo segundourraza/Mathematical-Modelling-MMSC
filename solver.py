@@ -5,6 +5,7 @@ from enum import Enum, auto
 import numpy as np
 from scipy.optimize import newton, brentq
 from scipy.integrate import solve_ivp
+from scipy.interpolate import interp1d
 from expansion_coefficients import coeffs_fq
 from tqdm import tqdm
 
@@ -26,7 +27,7 @@ def odeV1(eta, x, gamma, omega, a1, a2, a3, epsilon):
     f, fp, q = x[0], x[1], x[2]
     fpp = ((f**(a1)*fp + q)/(epsilon*f**(a2+a3)) + (a3*gamma + gamma-omega)*fp)/(omega*eta) - a3*fp**2/f
     qp = -gamma*f+ omega*eta*fp
-    return fp, fpp, qp
+    return np.array([fp, fpp, qp])
 
 def inverted_odeV1(f, x, gamma, omega, a1, a2, a3, epsilon):
     """Inverted ode for state-space [f,g,q]
@@ -44,7 +45,6 @@ def inverted_odeV1(f, x, gamma, omega, a1, a2, a3, epsilon):
     x[2] = q
     """
     eta, fp, q = x[0], x[1], x[2]
-    
     etap = 1/fp
     fpp = ((f**(a1)*fp + q)/(epsilon*f**(a2+a3)) + (a3*gamma + gamma-omega)*fp ) / (omega*eta) - a3*fp**2/f
     qp = -gamma*f+ omega*eta*fp
@@ -94,7 +94,6 @@ def inverted_odeV2(f, x, gamma, omega, a1, a2, a3, epsilon):
     etap = 1/fp
     gp = -(q + f**a1*fp)/(epsilon*f**(a2))
     qp = -gamma*f + omega*eta*fp
-    print(f, x, etap)
     return np.array([etap, gp*etap, qp*etap])
 
 
@@ -155,9 +154,13 @@ class Solution:
         
         I = np.trapezoid(self.x[0], self.eta)
         self.res = I - self.Q0/(self.beta+1)
+        self._interp = interp1d(self.eta, self.x[0], fill_value=0, bounds_error=False)
 
     def xf(self,t):
         return self.eta_f*t**self.omega
+    
+    def theta(self, t, x):
+        return t**self.gamma*self._interp(x/t**self.omega)
     
 class Solver:
     ZERO_F = 1e-10
@@ -176,11 +179,9 @@ class Solver:
         
         # Self-similarity parameters
         self.gamma: float = 1/(a2 + a3 - a1)
-        self.omega: float  = 0.5*(self.a2+ self.a3)*self.gamma
+        self.omega: float  = 0.5*(self.a1*self.gamma + 1)
         self.beta: float = self.gamma + self.omega - 1
-        self.beta = (self.a1 + 1)*self.gamma - self.omega
-        # self.beta: float =(self.a2 + 1)*self.gamma - self.omega
-
+        
         self.__check_conditions()
 
     def __check_conditions(self):
@@ -243,59 +244,36 @@ class Solver:
     #########################################################################
     # BACKWARD INTEGRATOR
 
-    def find_etaf(self, etaf_guess, case:CaseType = CaseType.CaseA2, f_start = 1e-3, eta_floor = 1e-9, fp_condition = 1,
-                         method = 'newton')->Solution:
+    def find_etaf(self, etaf_guess, case:CaseType = CaseType.CaseA2, f_start = 1e-3, eta_floor = 1e-9, fp_condition = 10, tol =1e-4,
+                  state_space = 1, method = 'newton')->Solution:
         def func(eta_f):
-            eta, x = self.backward_integrator(eta_f=eta_f,case=case, f_start=f_start, eta_floor=eta_floor, fp_condition=fp_condition)
+            print(eta_f)
+            eta, x = self.backward_integrator(eta_f=eta_f,case=case, f_start=f_start, eta_floor=eta_floor, fp_condition=fp_condition, state_space=state_space)
             return self._check_integral_condition(eta, x)
         
         if method == 'newton':        
             if isinstance(etaf_guess, (float,int)):
-                eta_f = newton(func, etaf_guess)
+                eta_f = newton(func, etaf_guess, tol=tol)
             else:
                 raise ValueError("For 'newton' method 'f0' must be a scalar")
         elif method == 'brentq':
             if isinstance(etaf_guess, (list,tuple, np.ndarray)) and len(etaf_guess) == 2:
-                eta_f = brentq(func, *etaf_guess)
+                eta_f = brentq(func, *etaf_guess, tol=tol)
             else:
                 raise ValueError("For 'brentq' method 'f0' must be an interval")
         else:
             raise ValueError("'f0_span' must be a float to initialize a 'newton' root finder, or a list of length 2 to initialize a 'brentq' root finder.")
-        eta, x = self.backward_integrator(eta_f=eta_f,case=case, f_start=f_start, eta_floor=eta_floor, fp_condition=fp_condition)
+        eta, x = self.backward_integrator(eta_f=eta_f,case=case, f_start=f_start, eta_floor=eta_floor, fp_condition=fp_condition, state_space=state_space)
         return Solution(self.a1, self.a2, self.a3, self.omega, self.gamma, self.beta, self.Q0, self.epsilon, eta, x)
         
 
     def backward_integrator(self, eta_f, case:CaseType = CaseType.CaseA2, f_start = 1e-3, eta_floor = 1e-9, fp_condition = 1, state_space = 1):
-
         
-        if state_space == 1:
-            self._ode = lambda eta, x: odeV1(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
-            self._inverted_ode = lambda eta, x: inverted_odeV1(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
-        # elif state_space == 2:
-        #     x_deta[1] = f_deta**(self.a3)*(self.gamma*f_deta - self.omega*deta*fp_deta)
-        #     self._ode = lambda eta, x: odeV2(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
-        #     self._inverted_ode = lambda eta, x: inverted_odeV2(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
-        else:
-            raise ValueError()
-            
-    
-
-        # # ASSUMING CASE 1.1 => a = a1 
-        # # Check: a3 + 1 = a1
-        # if (self.a3 + 1 != self.a1):
-        #     raise ValueError("Condition 'a3 + 1 == a1' must be satisfied, currently {} != {}".format(self.a3+1, self.a1))
-        
-        # ASSUMING CASE 1.2 => a = a1
-        # Check a2 + a3 > a1
-        a = A_COMPUTERS[case](self.a1, self.a2, self.a3)
-        
-        
+        a = A_COMPUTERS[case](self.a1, self.a2, self.a3)    
         b = a*self.omega*eta_f
         def f_func(eta): return b**(1/a)*(eta_f-eta)**(1/a)
         def fp_func(eta): return -b/a*f_func(eta)**(1-a)
         def fpp_func(eta): return b*(a-1)/a*f_func(eta)**(-a)*fp_func(eta)
-
-
 
         # STARTING CONDITIONS
         f_s = f_start
@@ -314,14 +292,28 @@ class Solver:
         event_zero.terminal = True
 
         xs = [eta_s, fp_s, qs]
-        inverted_sol = solve_ivp(self._inverted_ode, [f_s,10], xs, events=(event_flip, event_zero, ),
-                                rtol = 1e-10, atol = 1e-10, first_step = 1e-8,
-                                vectorized=True,)
+        
+        if state_space == 1:
+            self._ode = lambda eta, x: odeV1(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
+            self._inverted_ode = lambda eta, x: inverted_odeV1(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
+        elif state_space == 2:
+            xs[1] = f_s**(self.a3)*(self.gamma*f_s - self.omega*eta_s*fp_s)
+            self._ode = lambda eta, x: odeV2(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
+            self._inverted_ode = lambda eta, x: inverted_odeV2(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
+        else:
+            raise ValueError()
+        
+
+
+        
+        inverted_sol = solve_ivp(self._inverted_ode, [f_s,1], xs, events=(event_flip, event_zero, ), 
+                                 rtol = 1e-10, atol = 1e-10,
+                                 vectorized=True)
         if inverted_sol.status == 1 and inverted_sol.y[0,-1] < eta_floor:
             return inverted_sol.y[0][::-1], np.flip(np.vstack([inverted_sol.t, inverted_sol.y[1:]]), axis = 1)
         else:
             sol = solve_ivp(self._ode, [inverted_sol.y[0,-1], eta_floor], [inverted_sol.t[-1], inverted_sol.y[1,-1], inverted_sol.y[2,-1]],
-                            rtol = 1e-10, atol = 1e-10, first_step = 1e-8,
+                            rtol = 1e-10, atol = 1e-10,
                             vectorized=True)
             return np.concatenate([inverted_sol.y[0], sol.t[1:]])[::-1],\
                     np.column_stack([np.vstack([inverted_sol.t, inverted_sol.y[1:]]), sol.y[:,1:]])[:,::-1]

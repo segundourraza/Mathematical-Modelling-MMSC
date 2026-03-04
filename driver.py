@@ -32,15 +32,15 @@ if __name__ == '__main__':
     etaf_guess = 0.1
 
     sols:List[Solution] = []
-    # for Q0 in tqdm(np.linspace(0.01, 0.9, 5)):
-    for Q0 in tqdm(np.logspace(-1, 1, 5)):
+    for Q0 in tqdm(np.linspace(0.01, 0.3, 5)):
+    # for Q0 in tqdm(np.logspace(-1, 1, 5)):
         solver = Solver(a1, a2, a3, Q0, epsilon)
         sols.append(solver.find_etaf(etaf_guess))
     
 
     fig1, ax1 = plt.subplots()
     for sol in sols:
-        ax1.plot(sol.eta, sol.x[0], label = "$Q_0 = {}$".format(sol.Q0))
+        ax1.plot(sol.eta, sol.x[0], label = "$Q_0 = {:.2e}$".format(sol.Q0))
     ax1.set_xlabel('$\\eta$')
     ax1.set_ylabel('$f(\\eta)$')
     ax1.grid()
@@ -48,9 +48,10 @@ if __name__ == '__main__':
 
     t = np.linspace(1e-1,10, 1000)
     fig2, ax2 = plt.subplots()
-    # fig3, ax3 = plt.subplots()
+    fig3, ax3 = plt.subplots()
     for sol in sols:
-        ax2.semilogy(sol.xf(t), t, label = "$Q_0 = {}$".format(sol.Q0))
+        ax2.semilogy(sol.xf(t), t, label = "$Q_0 = {:.2e}$".format(sol.Q0))
+        ax3.semilogy(sol.theta(t, 1), t, label = "$Q_0 = {:.2e}$".format(sol.Q0))
     
     ax2.legend()
     ax2.set_ylim(t[0])
@@ -66,8 +67,9 @@ if __name__ == '__main__':
     T,E = np.meshgrid(t, sols[0].eta)
     
     interp = interp1d(sols[0].eta, sols[0].x[0], fill_value="extrapolate")
-    X = E*T**sols[0].omega 
+    X = E*T**sols[0].omega
     Z =T**sols[0].gamma*interp(X/T**sols[0].gamma)
+    print(X/T**sols[0].gamma)
 
     fig, ax = plt.subplots()
     cf = ax.contourf(X, T, Z, levels = 100)
