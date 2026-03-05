@@ -22,10 +22,7 @@ with open(r"plots\sol1.pkl", "rb") as f:   # binary read mode
     sols:List[Solution] = pickle.load(f)
 
 fig1, ax1 = plt.subplots()
-fig2, ax2 = plt.subplots()
 for sol in sols:
-    print(len(sol.eta))
-    ax2.semilogy(sol.eta, abs(sol.x[1]), label = "$\\alpha_1 = {}, \\gamma = {}, \\omega = {}$".format(sol.a1, sol.a2, sol.a3))
     ax1.plot(sol.eta, sol.x[0], label = "$\\alpha_1 = {}, \\gamma = {}, \\omega = {}$".format(sol.a1, sol.a2, sol.a3))
     # ax1.plot(sol.eta, sol.x[0], label = "$Q_0 = {:.2e}$".format(sol.Q0))
 ax1.set_xlabel('$\\eta$')

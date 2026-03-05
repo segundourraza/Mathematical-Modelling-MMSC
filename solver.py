@@ -153,7 +153,7 @@ class Solution:
         self.f0 = self.x[0][0]
         
         I = np.trapezoid(self.x[0], self.eta)
-        self.res = I - self.Q0/(self.beta+1)
+        self.Res = I - self.Q0/(self.beta+1)
         self._interp = interp1d(self.eta, self.x[0], fill_value=0, bounds_error=False)
 
     def xf(self,t):
@@ -163,7 +163,7 @@ class Solution:
         return t**self.gamma*self._interp(x/t**self.omega)
     
 class Solver:
-    ZERO_F = 1e-10
+    ZERO_F = 1e-9
 
     def __init__(self, a1, a2, a3, Q0, epsilon):
         
@@ -201,53 +201,46 @@ class Solver:
     #####################################################################################
     # FORWARD INTEGRATION
 
-    def forward_integration(self, f0, deta, invert_fraction = 0.1, state_space = 1):
-        if isinstance(f0, (list, tuple, np.ndarray)):
-            nf0 = len(f0)
-            a = [0]*nf0
-            b = [0]*nf0
-            for i in tqdm(range(nf0)):
-                a[i], b[i] = self.forward_integration(f0[i], deta, invert_fraction, state_space=state_space)
-            return a, b
+    def forward_integration(self, f0, deta, f_condition = 0.5, state_space = 1):
+        # Compute quantities at eta = deta
+        f_deta, fp_deta, q_deta = self.evaluate_power_series(deta, f0)
+        x_deta = [f_deta, fp_deta, q_deta]
+        if f_deta < 0:
+            raise FloatingPointError("try a larger value of f(0)")
+        if state_space == 1:
+            self._ode = lambda eta, x: odeV1(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
+            self._inverted_ode = lambda eta, x: inverted_odeV1(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
+        elif state_space == 2:
+            x_deta[1] = f_deta**(self.a3)*(self.gamma*f_deta - self.omega*deta*fp_deta)
+            self._ode = lambda eta, x: odeV2(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
+            self._inverted_ode = lambda eta, x: inverted_odeV2(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
         else:
-            # Compute quantities at eta = deta
-            f_deta, fp_deta, q_deta = self.evaluate_power_series(deta, f0)
-            x_deta = [f_deta, fp_deta, q_deta]
-            if f_deta < 0:
-                raise FloatingPointError("try a larger value of f(0)")
-            if state_space == 1:
-                self._ode = lambda eta, x: odeV1(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
-                self._inverted_ode = lambda eta, x: inverted_odeV1(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
-            elif state_space == 2:
-                x_deta[1] = f_deta**(self.a3)*(self.gamma*f_deta - self.omega*deta*fp_deta)
-                self._ode = lambda eta, x: odeV2(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
-                self._inverted_ode = lambda eta, x: inverted_odeV2(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
-            else:
-                raise ValueError()
-            
-            # Normal solve
-            sol = solve_ivp(self._ode, [deta, 3], x_deta, events=self.__event(f0, invert_fraction),
-                            rtol = 1e-10, atol = 1e-10, first_step = 1e-6,
-                            vectorized=True)
-            # return sol.t, sol.y
-            
-            if sol.status == 1:
-                inverted_sol = solve_ivp(self._inverted_ode, [sol.y[0,-1], self.ZERO_F], [sol.t[-1], sol.y[1,-1], sol.y[2,-1]],
-                                         rtol = 1e-10, atol = 1e-10, first_step = 1e-8,
-                                         vectorized=True)
-                return np.concatenate([sol.t[:-1], inverted_sol.y[0]]), np.column_stack([sol.y[:,:-1],np.vstack([inverted_sol.t, inverted_sol.y[1:]])])
-            else:
-                return sol.t, sol.y
+            raise ValueError()
+        
+        def event_flip(t,x):
+            return x[0]/f0 > f_condition
+        event_flip.terminal = True
 
-    
+        # Normal solve
+        sol = solve_ivp(self._ode, [deta, 3], x_deta, events=(event_flip,),
+                        rtol = 1e-10, atol = 1e-10,
+                        vectorized=True)
+        if sol.status == 1:
+            inverted_sol = solve_ivp(self._inverted_ode, [sol.y[0,-1], self.ZERO_F], [sol.t[-1], sol.y[1,-1], sol.y[2,-1]],
+                                        rtol = 1e-10, atol = 1e-10, 
+                                        vectorized=True)
+            return np.concatenate([sol.t[:-1], inverted_sol.y[0]]), np.column_stack([sol.y[:,:-1],np.vstack([inverted_sol.t, inverted_sol.y[1:]])])
+        else:
+            return sol.t, sol.y
+
+
     
     #########################################################################
     # BACKWARD INTEGRATOR
 
-    def find_etaf(self, etaf_guess, case:CaseType = CaseType.CaseA2, f_start = 1e-3, eta_floor = 1e-9, fp_condition = 10, tol =1e-4,
+    def find_etaf(self, etaf_guess, case:CaseType = CaseType.CaseA2, f_start = 1e-3, eta_floor = 1e-9, fp_condition = 1, tol =1e-4,
                   state_space = 1, method = 'newton')->Solution:
         def func(eta_f):
-            print(eta_f)
             eta, x = self.backward_integrator(eta_f=eta_f,case=case, f_start=f_start, eta_floor=eta_floor, fp_condition=fp_condition, state_space=state_space)
             return self._check_integral_condition(eta, x)
         
@@ -282,6 +275,17 @@ class Solver:
         fpp_s = fpp_func(eta_s)
         qs = -f_s**(self.a1)*fp_s - self.epsilon*f_s**(self.a2+self.a3)*(((self.a3+1)*self.gamma - self.omega)*fp_s\
                                                                         - self.omega*eta_s*(fpp_s + self.a3*(fp_s)**2/f_s))
+
+        
+        if state_space == 1:
+            self._ode = lambda eta, x: odeV1(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
+            self._inverted_ode = lambda eta, x: inverted_odeV1(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
+        elif state_space == 2:
+            xs[1] = f_s**(self.a3)*(self.gamma*f_s - self.omega*eta_s*fp_s)
+            self._ode = lambda eta, x: odeV2(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
+            self._inverted_ode = lambda eta, x: inverted_odeV2(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
+        else:
+            raise ValueError()
         # INTEGRATE
         def event_flip(f,x):
             return abs(x[1]) > fp_condition
@@ -293,20 +297,8 @@ class Solver:
 
         xs = [eta_s, fp_s, qs]
         
-        if state_space == 1:
-            self._ode = lambda eta, x: odeV1(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
-            self._inverted_ode = lambda eta, x: inverted_odeV1(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
-        elif state_space == 2:
-            xs[1] = f_s**(self.a3)*(self.gamma*f_s - self.omega*eta_s*fp_s)
-            self._ode = lambda eta, x: odeV2(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
-            self._inverted_ode = lambda eta, x: inverted_odeV2(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.epsilon)
-        else:
-            raise ValueError()
-        
-
-
-        
         inverted_sol = solve_ivp(self._inverted_ode, [f_s,1], xs, events=(event_flip, event_zero, ), 
+                                 method='LSODA',
                                  rtol = 1e-10, atol = 1e-10,
                                  vectorized=True)
         if inverted_sol.status == 1 and inverted_sol.y[0,-1] < eta_floor:
@@ -391,14 +383,6 @@ class Solver:
 
     ###########################################################################
     # AUXILIARY METHODS
-    def __event(self, f0, invert_fraction):
-        def zero_f(eta, x):
-            return x[0]/f0 > invert_fraction
-        zero_f.terminal = True
-        zero_f.direction = -1
-        
-        return (zero_f,)
-        
 
     def _check_integral_condition(self, eta, x):
         if all(isinstance(_, (list, np.ndarray)) for _ in eta):
@@ -448,7 +432,6 @@ def find_bracket_forward(f, x0, step=0.01, xmax=1, tol = 1e-10, max_iter = 100):
     x_right = x_left + step
     while x_right <= xmax:
         f_right = f(x_right)
-        print(x_right, f_right)
         if f_right == 0:
             x_low = binary_search_left(f, x_left, x_right, tol = tol, max_iter=max_iter)
             break

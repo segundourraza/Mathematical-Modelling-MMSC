@@ -17,6 +17,9 @@ if __name__ == '__main__':
     a1 = 2   # Power of D
     a2 = 3   # Power of K
     a3 = 0.8 # Power of tau
+
+    a1 = 2
+    a2 = a3 = 3
     
     
     # a1 = 3   # Power of D
@@ -29,7 +32,7 @@ if __name__ == '__main__':
 
     epsilon = 1
 
-    etaf_guess = 0.1
+    etaf_guess = 0.3
 
     sols:List[Solution] = []
     for Q0 in tqdm(np.linspace(0.01, 0.3, 5)):
@@ -51,7 +54,7 @@ if __name__ == '__main__':
     fig3, ax3 = plt.subplots()
     for sol in sols:
         ax2.semilogy(sol.xf(t), t, label = "$Q_0 = {:.2e}$".format(sol.Q0))
-        ax3.semilogy(sol.theta(t, 1), t, label = "$Q_0 = {:.2e}$".format(sol.Q0))
+        ax3.semilogy(sol.theta(t, 0.5), t, label = "$Q_0 = {:.2e}$".format(sol.Q0))
     
     ax2.legend()
     ax2.set_ylim(t[0])
@@ -64,16 +67,17 @@ if __name__ == '__main__':
 
     
 
-    T,E = np.meshgrid(t, sols[0].eta)
+    # T,E = np.meshgrid(t, sols[0].eta)
     
-    interp = interp1d(sols[0].eta, sols[0].x[0], fill_value="extrapolate")
-    X = E*T**sols[0].omega
-    Z =T**sols[0].gamma*interp(X/T**sols[0].gamma)
-    print(X/T**sols[0].gamma)
+    # interp = interp1d(sols[0].eta, sols[0].x[0], fill_value="extrapolate")
+    
+    # X = E*T**sols[0].omega
+    # Z =T**sols[0].gamma*interp(X/T**sols[0].gamma)
+    # print(Z)
 
-    fig, ax = plt.subplots()
-    cf = ax.contourf(X, T, Z, levels = 100)
-    ax.set_yscale('log')
-    fig.colorbar(cf, ax=ax)
+    # fig, ax = plt.subplots()
+    # cf = ax.contourf(X, T, Z, levels = 100)
+    # ax.set_yscale('log')
+    # fig.colorbar(cf, ax=ax)
 
     plt.show()

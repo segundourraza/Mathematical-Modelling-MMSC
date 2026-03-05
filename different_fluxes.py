@@ -10,35 +10,27 @@ plt.rcParams.update({
 })
 
 import numpy as np
-from scipy.interpolate import interp1d
+
 from solver import Solver, Solution
     
 if __name__ == '__main__':
 
-    
-    epsilon = 1
-    Q0 = 0.1
-
-    param_set = [
-                 [2, 1/4,   3/4],
-                 [4, 1/6,   5/6],
-                 [6, 1/8,   7/8],
-                 [8, 11/10, 9/10]
-                 ]
-
+    epsilon = 1                 
+    params = [2, 1/4,   3/4]
 
     etaf_guess = 0.3
     fstart = 1e-2
 
-    iterable = np.linspace(0.1, 0.4, 2)
+    iterable = np.linspace(0.1, 1, 50)
     
     sols:List[Solution] = []
     igs = []
     res = []
     fs = []
-    for params in tqdm(param_set):
+    for Q0 in ([0.01, 0.1, 0.2, 0.5]):
         a1, gamma, omega = params
         a2 = a3 = a1 + 1
+        print(a1, a2, a3)
         solver = Solver(a1, a2, a3, Q0, epsilon)
         sols.append(solver.find_etaf(etaf_guess,f_start=fstart, state_space=1, fp_condition=0.1))
         igs.append(solver.backward_integrator(etaf_guess, f_start=fstart))
@@ -55,7 +47,7 @@ if __name__ == '__main__':
 
     fig1, ax1 = plt.subplots()
     for sol,ig,(ee,f) in zip(sols, igs, fs):
-        l, = ax1.plot(sol.eta, sol.x[0], label = "$\\alpha_1 = {}, \\alpha_2 = {}, \\alpha_3 = {}$".format(sol.a1, sol.a1, sol.a3))
+        l, = ax1.plot(sol.eta, sol.x[0], label = "$Q_0 = {:.2f}$".format(sol.Q0))
         ax1.plot(ig[0], ig[1][0], '--', color = l.get_color(), linewidth = l.get_linewidth()*0.5)
         
         ax1.plot(ee, f,   '-.',  color = 'k', zorder = 1e7*2, linewidth = 1.25)
@@ -76,43 +68,5 @@ if __name__ == '__main__':
     ax2.grid()
     # ax2.legend()
     fig2.tight_layout()
-
-
-    t = np.linspace(1e-1,10, 1000)
-    t = np.logspace(-1,1, 1000)
-    fig2, ax2 = plt.subplots()
-    fig3, ax3 = plt.subplots()
-    for sol in sols:
-        ax2.semilogy(sol.xf(t), t, label = "$\\alpha_1 = {}, \\alpha_2 = {}, \\alpha_3 = {}$".format(sol.a1, sol.a1, sol.a3))
-        ax3.semilogy(sol.theta(t, 0.5), t,  label = "$\\alpha_1 = {}, \\alpha_2 = {}, \\alpha_3 = {}$".format(sol.a1, sol.a1, sol.a3))
-    
-    for a in [ax2, ax3]:
-        a.legend()
-        a.set_ylim(t[0])
-        a.set_ylabel("$t$", rotation = 0)
-        a.grid(which='major', linestyle='-', linewidth=0.8)
-        a.grid(which='minor', linestyle='-', linewidth=0.25)
-    ax2.set_xlabel("$x_f$")
-    ax3.set_xlabel("$\\theta$")
-    
-    fig2.tight_layout()
-    fig3.tight_layout()
-
-
-    
-    T,E = np.meshgrid(t, sols[0].eta)
-    
-    interp = interp1d(sols[0].eta, sols[0].x[0], bounds_error=False)
-    
-    X = E*T**sols[0].omega
-    Z =T**sols[0].gamma*interp(X/T**sols[0].gamma)
-    print(Z)
-
-    fig, ax = plt.subplots()
-    cf = ax.contourf(X, T, Z, levels = 100)
-    ax.set_yscale('log')
-    fig.colorbar(cf, ax=ax)
-
-
 
     plt.show()
