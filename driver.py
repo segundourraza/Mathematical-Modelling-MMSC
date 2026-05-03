@@ -20,6 +20,10 @@ if __name__ == '__main__':
 
     a1 = 2
     a2 = a3 = 3
+
+    # a1 = 4.5
+    # a2 = 2
+    # a3 = 3
     
     
     # a1 = 3   # Power of D
@@ -38,7 +42,7 @@ if __name__ == '__main__':
     for Q0 in tqdm(np.linspace(0.01, 0.3, 5)):
     # for Q0 in tqdm(np.logspace(-1, 1, 5)):
         solver = Solver(a1, a2, a3, Q0, epsilon)
-        sols.append(solver.find_etaf(etaf_guess))
+        sols.append(solver.find_etaf(etaf_guess, method='brentq'))
     
 
     fig1, ax1 = plt.subplots()
