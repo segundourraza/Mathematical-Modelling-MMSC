@@ -45,14 +45,17 @@ if __name__ == '__main__':
     print()
 
 
-    f0_guess = sol_backward.eta_f
+    f0_guess = sol_backward.f0
+    f0_guess = (0.1, 10)
     eta_start = 1e-6
-    eta_transition = 1e-1
-    sol_forward = solver.find_f0_desingularized(f0_guess, eta_start, eta_transition)
-    print(f"Solved f0:  {sol_forward.f0:.6f}")
-    print(f"etaf:       {sol_forward.eta_f:.6f}")
-    print(f"Residual:   {sol_forward.Res:.6e}")
-    print()
+    eta_transition = 1e-5
+    # # eta_transition = 1e-1
+    # # eta_transition = 1
+    # sol_forward = solver.find_f0_desingularized(f0_guess, eta_start, eta_transition, method='brentq')
+    # print(f"Solved f0:  {sol_forward.f0:.6f}")
+    # print(f"etaf:       {sol_forward.eta_f:.6f}")
+    # print(f"Residual:   {sol_forward.Res:.6e}")
+    # print()
 
     # fig, ax = plt.subplots(1,2, figsize = (14,8)).
     fig1, ax1 = plt.subplots()
@@ -63,8 +66,8 @@ if __name__ == '__main__':
     ee = np.linspace(0, sol_backward.eta[-1], 100)
     f, fp , q = solver.evaluate_power_series(ee, sol_backward.f0)
     for a in [ax1,ax2]:
-        a.plot(sol_backward.eta, sol_backward.x[0], '-r')
-        a.plot(sol_forward.eta, sol_forward.x[0], '-b')
+        a.plot(sol_backward.eta, sol_backward.x[0], '-r', zorder = -1e8)
+        # a.plot(sol_forward.eta, sol_forward.x[0], '-b')
         a.plot(ee, f,   '-.',  color = 'k', label = "Power series", zorder = 1e7*2, linewidth = 1.25)
     
     
@@ -97,7 +100,11 @@ if __name__ == '__main__':
         q_lines_old.append(np.column_stack([eta, x[2]]))
     
         # --- TAYLOR SERIES APPROACH ---
-        eta,x = solver.desingularized_forward_integration(sol_backward.f0, delta, eta_transition=sol_backward.eta_f)
+        eta,x = solver.desingularized_forward_integration(sol_backward.f0, delta, 
+                                                        #   eta_transition=sol_backward.eta_f/2,
+                                                          eta_transition=eta_transition,
+                                                        #   eta_transition=sol_backward.eta_f
+                                                          )
         f_lines_new.append(np.column_stack([eta, x[0]]))
         q_lines_new.append(np.column_stack([eta, x[2]]))
         

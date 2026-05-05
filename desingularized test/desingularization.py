@@ -29,21 +29,27 @@ if __name__ == '__main__':
     omega = mu/(2*(mu-a1))
     
 
-    fig1, (ax11, ax12) = plt.subplots(2,1)
+    fig1, ax1 = plt.subplots()
+    fig2, ax2 = plt.subplots()
+    fig3, ax3 = plt.subplots()
     ode_old = odeV1(sol.eta, sol.x, sol.gamma, sol.omega, sol.a1, sol.a2, sol.a3, sol.epsilon)
     ode_new = desingularized_ode(sol.eta, sol.x, sol.gamma, sol.omega, sol.a1, sol.a2, sol.a3, sol.epsilon)
-    l, =ax11.plot(sol.eta, abs(ode_old[1]), '-')
-    ax11.plot(sol.eta, abs(ode_new[1]), '-.', )
-    
-    ax12.plot(sol.eta, abs(ode_new[1] - ode_old[1]))
-    for _ax in [ax11,ax12]:
-        _ax.set_yscale('log')
-        _ax.grid()
+    for e,ax in zip(range(3), [ax1,ax2,ax3]):
+        # l, =ax.plot(sol.eta, ode_old[e], '-')
+        # ax.plot(sol.eta, ode_new[e], '-.', )
+        
+        l, =ax.plot(sol.eta, abs(ode_old[e]), '-')
+        ax.plot(sol.eta, abs(ode_new[e]), '-.', )
+        
+
+        ax.grid()
+        # ax.set_ylim(-10, min(max(ode_new[e])+abs(max(ode_new[e])), 10))
+
+        ax.set_yscale('log')
 
 
-
-    fig2, ax2 = plt.subplots()
-    ax2.plot(sol.eta, sol.x[0])
-    ax2.grid()
+    # fig2, ax2 = plt.subplots()
+    # ax2.plot(sol.eta, sol.x[0])
+    # ax2.grid()
 
     plt.show()

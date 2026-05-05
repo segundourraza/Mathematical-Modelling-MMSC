@@ -11,14 +11,12 @@ from solver import Solver
     
 if __name__ == '__main__':
     
+    a1 = 2   # Power of D
+    a2 = 3   # Power of K
+    a3 = 0.8 # Power of tau
+    
+    Q0 = 0.1 # Flux Pre-factor
     epsilon = 1
-
-    Q0 = 0.1
-
-    a1 = 2
-    a2 = a3 = 3
-
-    etaf_guess = 0.3
 
     solver = Solver(a1, a2, a3, Q0, epsilon)
     
@@ -30,13 +28,14 @@ if __name__ == '__main__':
     data = []
     iterable = np.linspace(2, 0.15, 10)
     for f0_guess in tqdm(iterable):
-        eta,x = solver.desingularized_forward_integration(f0_guess, deta=eta0, eta_transition=eta_transition)
+        eta,x = solver.desingularized_forward_integration(f0_guess, eta_start=eta0, eta_transition=eta_transition)
         data.append([f0_guess, solver._check_integral_condition(eta,x)])
     data = np.array(data)
 
     fig, ax = plt.subplots()
     ax.plot(*data.T)
     
+    etaf_guess = 0.3
     sol_backward = solver.find_etaf(etaf_guess=etaf_guess)
     print(f"Solved f0:  {sol_backward.f0:.6f}")
     print(f"etaf:       {sol_backward.eta_f:.6f}")

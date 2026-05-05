@@ -121,19 +121,22 @@ def desingularized_ode(eta, x, gamma, omega, a1, a2, a3, epsilon):
     x[2] = q
     """
     f, fp, q = x[0], x[1], x[2]
-    qp = -gamma*f+ omega*eta*fp
+    qp = -gamma*f + omega*eta*fp
     fpp = (-qp - (fp)**2*phi_0_prime(f,gamma, omega, a1, a2, a3, epsilon))/phi_0(f,gamma, omega, a1, a2, a3, epsilon)
     return np.array([fp, fpp, qp])
 
 
-def integrate_desingularizd_ode(f0, Q, gamma, omega, eps, a1, a2, a3,
-                         eta_max=1.0, delta=1e-6):
+def integrate_desingularized_ode(f0, Q, gamma, omega, eps, a1, a2, a3,
+                         eta_max=1.0, delta=1e-6, f_floor = 1e-3):
     mu = a2 + a3
 
     # --- Manifold ICs at eta = 0 ---
     Psi0 = f0**a1 + eps * f0**mu * ((a3 + 1) * gamma - omega)
     dPsi0 = a1 * f0**(a1-1) + eps * mu * f0**(mu-1) * ((a3+1)*gamma - omega)
-
+    
+    lam2 = f0**(a1-mu)/(eps*omega) + ((a3+1)*gamma-omega)/omega
+    # print(Psi0/(eps*omega*f0**mu)-lam2)
+    # print(f0, (omega - (a3+1)*gamma)**(1/(a1-mu)))
     g0 = -Q / Psi0
     q0 = -Q  # boundary condition J(0) = -Q
     h0 = (gamma * f0 - g0**2 * dPsi0) / Psi0  # f''(0) from reduced ODE
@@ -145,9 +148,15 @@ def integrate_desingularizd_ode(f0, Q, gamma, omega, eps, a1, a2, a3,
 
     y0 = [f_d, g_d, q_d]
 
-    ode = lambda t,x: desingularized_ode(t,x, gamma, omega, a1, a2, a3, eps)    
+    def event(eta,x):
+        return x[0] - f_floor
+    event.terminal = True
+    
+
+    ode = lambda t,x: desingularized_ode(t,x, gamma, omega, a1, a2, a3, eps)
     return solve_ivp(ode, [delta, eta_max], y0,
                     method='LSODA', rtol=1e-10, atol=1e-12,
+                    events=event,
                     dense_output=True)
 
 
@@ -288,26 +297,44 @@ class Solver:
             return sol.t, sol.y
     
 
-    def desingularized_forward_integration(self, f0, deta, eta_transition):
-        sol =  integrate_desingularizd_ode(f0, self.Q0, self.gamma, self.omega, self.eps, self.a1, self.a2, self.a3,
-                                    eta_max=eta_transition, delta=deta)
-        if np.isclose(sol.y[0][-1], 0.0):
+    def desingularized_forward_integration(self, f0, eta_start, eta_transition, gradient_condition = 10, f_floor = 1e-3):
+        sol =  integrate_desingularized_ode(f0, self.Q0, self.gamma, self.omega, self.eps, self.a1, self.a2, self.a3,
+                                    eta_max=eta_transition, delta=eta_start, f_floor=f_floor)
+        
+        if np.isclose(sol.y[0,-1], 0.0):
             return sol.t, sol.y
         else:
-            inverted_ode = lambda t,x: inverted_odeV1(t,x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.eps)
-            inverted_sol = solve_ivp(inverted_ode, [sol.y[0,-1], self.ZERO_F], [sol.t[-1], sol.y[1,-1], sol.y[2,-1]],
-                                        rtol = 1e-10, atol = 1e-10, 
-                                        vectorized=True)
-            return np.concatenate([sol.t[:-1], inverted_sol.y[0]]), np.column_stack([sol.y[:,:-1],np.vstack([inverted_sol.t, inverted_sol.y[1:]])])
+                    
+            def event_flip(t,x):
+                return abs(x[1]) < gradient_condition
+            event_flip.terminal = True
+            
+            # Normal solve
+            ode = lambda eta, x: odeV1(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.eps)
+            sol2 = solve_ivp(ode, [sol.t[-1], 3], sol.y[:,-1], 
+                            #  events=(event_flip,),
+                            rtol = 1e-10, atol = 1e-10,
+                            vectorized=True)
+            eta, x = sol2.t, sol2.y
+            
+            # print(len(eta))
+            # if sol2.status == 1:
+            #     inverted_sol = solve_ivp(self._inverted_ode, [sol2.y[0,-1], self.ZERO_F], [sol2.t[-1], sol2.y[1,-1], sol2.y[2,-1]],
+            #                                 rtol = 1e-10, atol = 1e-10, 
+            #                                 vectorized=True)
+            #     eta, x = np.concatenate([sol2.t[:-1], inverted_sol.y[0]]), np.column_stack([sol2.y[:,:-1],np.vstack([inverted_sol.t, inverted_sol.y[1:]])])
+            # else:
+            #     eta, x = sol2.t, sol2.y
+        return np.concatenate([sol.t[:-1], eta]), np.column_stack([sol.y[:,:-1], x])
 
     
     def find_f0_desingularized(self, f0_guess, eta0, eta_transition,  method = 'newton'):
-        
         def func(f0):
+            # print("lambda: ", -1/(self.omega*self.eps*f0**(self.a2 + self.a3)))
             if np.isclose(f0**(self.a1 - self.a2 - self.a3) + self.eps*((self.a3+1)*self.gamma - self.omega), 0.0):
                 raise ConditionViolationError("Normal hyperbolicity is lost, eigenvalue tends to infinity. ")
 
-            eta, x = self.desingularized_forward_integration(f0=f0, deta = eta0, eta_transition=eta_transition)
+            eta, x = self.desingularized_forward_integration(f0=f0, eta_start = eta0, eta_transition=eta_transition)
             return self._check_integral_condition(eta, x)
         
         if method == 'newton':        
@@ -328,7 +355,7 @@ class Solver:
 
         else:
             raise ValueError("'f0_span' must be a float to initialize a 'newton' root finder, or a list of length 2 to initialize a 'brentq' root finder.")
-        eta, x = self.desingularized_forward_integration(f0=f0, deta = eta0, eta_transition=eta_transition)
+        eta, x = self.desingularized_forward_integration(f0=f0, eta_start = eta0, eta_transition=eta_transition)
         return Solution(self.a1, self.a2, self.a3, self.omega, self.gamma, self.beta, self.Q0, self.eps, eta, x)
 
 
