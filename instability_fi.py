@@ -66,14 +66,14 @@ if __name__ == '__main__':
     ee = np.linspace(0, sol_backward.eta[-1], 100)
     f, fp , q = solver.evaluate_power_series(ee, sol_backward.f0)
     for a in [ax1,ax2]:
-        a.plot(sol_backward.eta, sol_backward.x[0], '-r', zorder = -1e8)
+        a.plot(sol_backward.eta, sol_backward.x[0], '-r', zorder = -1e8,label = "$f(\\eta)$")
         # a.plot(sol_forward.eta, sol_forward.x[0], '-b')
         a.plot(ee, f,   '-.',  color = 'k', label = "Power series", zorder = 1e7*2, linewidth = 1.25)
     
     
     n_lines = 500
     n_lines = 100
-    # n_lines = 10
+    n_lines = 10
 
     mask_func = lambda eta: eta < 0.05
     mask = mask_func(sol_backward.eta)
@@ -93,7 +93,7 @@ if __name__ == '__main__':
     q_lines_new = []
     
     flag = True
-    for i,delta in enumerate(iterable):
+    for i,delta in enumerate(tqdm(iterable)):
         # --- POWER SERIES APPROACH ---
         eta,x = solver.forward_integration(sol_backward.f0, delta, state_space=1)
         f_lines_old.append(np.column_stack([eta, x[0]]))
@@ -128,9 +128,10 @@ if __name__ == '__main__':
         a.set_xlim(0,0.26)
         a.set_ylabel("$f(\\eta)$", rotation = 0, labelpad=20)
         a.grid()
-            
-    # ax1.set_box_aspect(1)  # force square axes regardless of figsize
-    # fig1.savefig(f'forward_instability.pdf', bbox_inches='tight', pad_inches=0.02)
+    leg = ax1.legend(loc = 'lower left')
+    leg.set_zorder(1e10)
+    ax1.set_box_aspect(1)  # force square axes regardless of figsize
+    fig1.savefig(f'forward_instability.pdf', bbox_inches='tight', pad_inches=0.02)
     
     fig1.tight_layout()
 

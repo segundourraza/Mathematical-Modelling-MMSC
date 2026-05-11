@@ -85,7 +85,8 @@ if __name__ == '__main__':
     f_full_lines = []
     
     flag = True
-    for i,delta in enumerate(tqdm(iterable)):
+    # for i,delta in enumerate(tqdm(iterable)):
+    for i,delta in enumerate(iterable):
         # --- EARLY TERMINATION ---
         eta,x = solver.desingularized_forward_integration(sol_backward.f0, 
                                                           eta_start=delta, eta_transition=eta_transition,

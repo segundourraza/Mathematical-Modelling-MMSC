@@ -134,9 +134,6 @@ def integrate_desingularized_ode(f0, Q, gamma, omega, eps, a1, a2, a3,
     Psi0 = f0**a1 + eps * f0**mu * ((a3 + 1) * gamma - omega)
     dPsi0 = a1 * f0**(a1-1) + eps * mu * f0**(mu-1) * ((a3+1)*gamma - omega)
     
-    lam2 = f0**(a1-mu)/(eps*omega) + ((a3+1)*gamma-omega)/omega
-    # print(Psi0/(eps*omega*f0**mu)-lam2)
-    # print(f0, (omega - (a3+1)*gamma)**(1/(a1-mu)))
     g0 = -Q / Psi0
     q0 = -Q  # boundary condition J(0) = -Q
     h0 = (gamma * f0 - g0**2 * dPsi0) / Psi0  # f''(0) from reduced ODE
@@ -330,7 +327,6 @@ class Solver:
     
     def find_f0_desingularized(self, f0_guess, eta0, eta_transition,  method = 'newton'):
         def func(f0):
-            # print("lambda: ", -1/(self.omega*self.eps*f0**(self.a2 + self.a3)))
             if np.isclose(f0**(self.a1 - self.a2 - self.a3) + self.eps*((self.a3+1)*self.gamma - self.omega), 0.0):
                 raise ConditionViolationError("Normal hyperbolicity is lost, eigenvalue tends to infinity. ")
 
@@ -367,7 +363,7 @@ class Solver:
                   state_space = 1, method = 'newton')->Solution:
         def func(eta_f):
             eta, x = self.backward_integrator(eta_f=eta_f,case=case, f_start=f_start, eta_floor=eta_floor, fp_condition=fp_condition, state_space=state_space)
-            return self._check_integral_condition(eta, x)
+            return self._residual(eta, x)
         
         if method == 'newton':        
             if isinstance(etaf_guess, (float,int)):
@@ -384,11 +380,7 @@ class Solver:
         eta, x = self.backward_integrator(eta_f=eta_f,case=case, f_start=f_start, eta_floor=eta_floor, fp_condition=fp_condition, state_space=state_space)
         return Solution(self.a1, self.a2, self.a3, self.omega, self.gamma, self.beta, self.Q0, self.eps, eta, x)
         
-
-    def backward_integrator(self, eta_f, case:CaseType = CaseType.CaseA2, 
-                            f_start = 1e-3, eta_floor = 1e-9, 
-                            fp_condition = 1, state_space = 1, 
-                            method = 'LSODA'):
+    def backward_integrator(self, eta_f, case:CaseType = CaseType.CaseA2, f_start = 1e-3, eta_floor = 1e-9, fp_condition = 1, state_space = 1):
         
         a = A_COMPUTERS[case](self.a1, self.a2, self.a3)    
         b = a*self.omega*eta_f
@@ -404,6 +396,12 @@ class Solver:
         qs = -f_s**(self.a1)*fp_s - self.eps*f_s**(self.a2+self.a3)*(((self.a3+1)*self.gamma - self.omega)*fp_s\
                                                                         - self.omega*eta_s*(fpp_s + self.a3*(fp_s)**2/f_s))
 
+        # def psi(f): return -self.omega*eta_f*f + (self.omega - self.a1*self.gamma)/(self.a1*(self.a1+2)*self.omega*eta_f)*f**(self.a1+1)
+        # def chi(f): return eta_f - f**self.a1/(self.a1*self.omega*eta_f)
+
+        # print(eta_s, fp_s, qs)
+        # print(chi(f_start), psi(f_start)/f_start**self.a1)
+        # print()
         
         if state_space == 1:
             self._ode = lambda eta, x: odeV1(eta, x, self.gamma, self.omega, self.a1, self.a2, self.a3, self.eps)
@@ -424,13 +422,10 @@ class Solver:
         event_zero.terminal = True
 
         xs = [eta_s, fp_s, qs]
-        
-        inverted_sol = solve_ivp(self._inverted_ode, [f_s,10], xs, events=(event_flip, event_zero, ), 
-                                 method=method,
-                                #  method='LSODA',
+        inverted_sol = solve_ivp(self._inverted_ode, [f_s,1], xs, events=(event_flip, event_zero, ), 
+                                 method='LSODA',
                                  rtol = 1e-10, atol = 1e-10,
                                  vectorized=True)
-        # --- Flipping integration ----
         if inverted_sol.status == 1 and inverted_sol.y[0,-1] < eta_floor:
             return inverted_sol.y[0][::-1], np.flip(np.vstack([inverted_sol.t, inverted_sol.y[1:]]), axis = 1)
         else:
@@ -513,6 +508,8 @@ class Solver:
 
     ###########################################################################
     # AUXILIARY METHODS
+    def _residual(self, eta, x):
+        return x[-1,0] - self.Q0
 
     def _check_integral_condition(self, eta, x):
         if all(isinstance(_, (list, np.ndarray)) for _ in eta):
@@ -522,6 +519,15 @@ class Solver:
             res = I - self.Q0/(self.beta+1)
             return res 
 
+    @staticmethod
+    def compute_lambda2(sol:Solution):
+        f0 = sol.f0
+        eps = sol.epsilon
+        a1, a3 = sol.a1, sol.a3
+        mu = sol.a2 + sol.a3
+        gamma, omega = sol.gamma, sol.omega
+        return f0**(a1-mu)/(eps*omega) + ((a3+1)*gamma-omega)/omega
+        
 
 
     @property
