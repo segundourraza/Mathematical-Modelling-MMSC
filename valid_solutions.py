@@ -87,7 +87,7 @@ if __name__ == '__main__':
     f0_low, f0_high  = f0_guess, 3*f0_guess
 
     f0_search = np.linspace(f0_low, f0_high,100)
-    sol_eta, sol_x = solver.solve(f0=f0_search, deta = eta0)
+    sol_eta, sol_x = solver.forward_integration(f0=f0_search, deta = eta0)
     save(f0_search, sol_eta, sol_x)
     filename = 'sol2.pkl'
     with open(filename, 'rb') as f:
